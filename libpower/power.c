@@ -91,18 +91,32 @@ static void power_hint_interactive(int on) {
 
 }
 
+static void power_hint_vsync(int on) {
+	if(on) {
+	    write_string(DDR_FREQ_MIN_PATH, DDR_FREQ_BOOST);
+	    write_string(GPU_FREQ_MIN_PATH, GPU_FREQ_BOOST);
+	} else {
+	    write_string(DDR_FREQ_MIN_PATH, DDR_FREQ_NORMAL);
+	    write_string(GPU_FREQ_MIN_PATH, GPU_FREQ_NORMAL);
+	}
+}
+
 static void power_hint(struct power_module *module, power_hint_t hint,
                        void *data) {
 
-    int var = 0;  
-    if(data != NULL)
-        var = *(int *) data;
-
+    int var = 0;
+    char * packageName;
+    int pid = 0;
     switch (hint) {
 	case POWER_HINT_VSYNC:
+		if(data != NULL)
+		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_VSYNC %d", var);
+		power_hint_vsync(var);
 		break;
 	case POWER_HINT_INTERACTION:
+		if(data != NULL)
+		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_INTERACTION %d", var);
 		power_hint_interactive(var);
 		break;
@@ -110,12 +124,20 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		DEBUG_LOG("POWER_HINT_LOW_POWER %d", var);
 		break;
 	case POWER_HINT_CPU_BOOST:
+		if(data != NULL)
+		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_CPU_BOOST %d", var);
 		power_hint_cpu_boost(var);
 		break;
 	case POWER_HINT_LAUNCH_BOOST:
-		DEBUG_LOG("POWER_HINT_LAUNCH_BOOST %d", var);
-		power_hint_interactive(var);
+		packageName = ((launch_boost_info_t *)data)->packageName;
+		pid = ((launch_boost_info_t *)data)->pid;
+
+		/* Meticulus: not quite sure what to do with this info?
+		 * Set thread prio on the app???
+		 */
+		DEBUG_LOG("POWER_HINT_LAUNCH_BOOST app=%s pid=%d", packageName,pid);
+		power_hint_interactive(0);
 		break;
 	case POWER_HINT_AUDIO:
 		DEBUG_LOG("POWER_HINT_AUDIO %d", var);
