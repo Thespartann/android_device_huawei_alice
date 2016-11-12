@@ -37,6 +37,8 @@
 #define DEBUG_LOG(x...) do {} while(0)
 #endif
 
+static int low_power = 0;
+
 static void write_string(char * path, char * value) {
     int fd = open(path, O_WRONLY);
 	if(!fd) { ALOGE("Unable to open to %s", path); return;}
@@ -65,7 +67,7 @@ static void power_set_interactive(struct power_module *module, int on) {
 #ifdef DEBUG
 		ALOGE("set_interactive %d", on);
 #endif
-	if(on) {
+	if(on && !low_power) {
 	    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
 	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
 	} else {
@@ -101,6 +103,25 @@ static void power_hint_vsync(int on) {
 	}
 }
 
+static void power_hint_low_power(int on) {
+    low_power = on;
+    if(on) {
+	write_string(CPU0_FREQ_MAX_PATH,CPU0_FREQ_LOW);
+	write_string(CPU0_FREQ_MIN_PATH,CPU0_FREQ_LOW);
+	write_string(GPU_FREQ_MAX_PATH,GPU_FREQ_LOW);
+	write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_LOW);
+	write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_LOW);
+	write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);
+    } else {
+	write_string(CPU0_FREQ_MAX_PATH,CPU0_FREQ_MAX);
+	write_string(CPU0_FREQ_MIN_PATH,CPU0_FREQ_LOW);
+	write_string(GPU_FREQ_MAX_PATH,GPU_FREQ_MAX);
+	write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
+	write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_MAX);
+	write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+    }
+}
+
 static void power_hint(struct power_module *module, power_hint_t hint,
                        void *data) {
 
@@ -112,22 +133,27 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		if(data != NULL)
 		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_VSYNC %d", var);
-		power_hint_vsync(var);
+		if(!low_power)
+		    power_hint_vsync(var);
 		break;
 	case POWER_HINT_INTERACTION:
 		if(data != NULL)
 		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_INTERACTION %d", var);
-		power_hint_interactive(var);
+		if(!low_power)
+		    power_hint_interactive(var);
 		break;
 	case POWER_HINT_LOW_POWER:
+		var = data == NULL ? 0 : 1;
 		DEBUG_LOG("POWER_HINT_LOW_POWER %d", var);
+		power_hint_low_power(var);
 		break;
 	case POWER_HINT_CPU_BOOST:
 		if(data != NULL)
 		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_CPU_BOOST %d", var);
-		power_hint_cpu_boost(var);
+		if(!low_power)
+		    power_hint_cpu_boost(var);
 		break;
 	case POWER_HINT_LAUNCH_BOOST:
 		packageName = ((launch_boost_info_t *)data)->packageName;
@@ -137,16 +163,19 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		 * Set thread prio on the app???
 		 */
 		DEBUG_LOG("POWER_HINT_LAUNCH_BOOST app=%s pid=%d", packageName,pid);
-		power_hint_interactive(0);
+		if(!low_power)
+		    power_hint_interactive(0);
 		break;
 	case POWER_HINT_AUDIO:
 		DEBUG_LOG("POWER_HINT_AUDIO %d", var);
+		ALOGI("Meticulus: POWER_HINT_AUDIO is used! Implement!");
 		break;
 	case POWER_HINT_SET_PROFILE:
 		DEBUG_LOG("POWER_HINT_PROFILE %d", var);
+		ALOGI("Meticulus: POWER_SET_PROFILE is used! Implement!");
 		break;
     default:
-		ALOGE("Unknown power hint %d", var);
+		ALOGE("Unknown power hint %d", hint);
         break;
     }
 }

@@ -17,13 +17,17 @@
  */
 
 #define DDR_FREQ_MIN_PATH 	"/sys/class/devfreq/ddrfreq/min_freq"
+#define DDR_FREQ_MAX_PATH 	"/sys/class/devfreq/ddrfreq/max_freq"
 #define DDR_FREQ_POLL	 	"/sys/class/devfreq/ddrfreq/polling_interval"
+#define DDR_FREQ_MAX	 	"933000000\n"
 #define DDR_FREQ_BOOST	 	"800000000\n"
 #define DDR_FREQ_NORMAL	 	"533000000\n"
 #define DDR_FREQ_LOW	 	"120000000\n"
 
 #define GPU_FREQ_MIN_PATH 	"/sys/class/devfreq/gpufreq/min_freq"
+#define GPU_FREQ_MAX_PATH 	"/sys/class/devfreq/gpufreq/max_freq"
 #define GPU_ANIM_BOOST_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/animation_boost"
+#define GPU_FREQ_MAX	 	"900000000\n"
 #define GPU_FREQ_BOOST	 	"800000000\n"
 #define GPU_FREQ_NORMAL	 	"120000000\n"
 #define GPU_FREQ_LOW	 	"120000000\n"
@@ -33,11 +37,13 @@
 #define CPU0_BOOST_P_DUR_DEF	8000
 #define CPU0_GOV_PATH	 	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 #define CPU0_FREQ_MIN_PATH 	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq"
+#define CPU0_FREQ_MAX_PATH 	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 #define CPU0_FREQ_MAX	 	"1709000\n"
 #define CPU0_FREQ_LOW	 	"480000\n"
 
 #define CPU4_BOOST_PULSE_PATH 	"/sys/devices/system/cpu/cpu4/cpufreq/interactive/boostpulse"
 #define CPU4_GOV_PATH	 	"/sys/devices/system/cpu/cpu4/cpufreq/scaling_governor"
 #define CPU4_FREQ_MIN_PATH	"/sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq"
+#define CPU4_FREQ_MAX_PATH	"/sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq"
 #define CPU4_FREQ_MAX	 	"2016000\n"
 #define CPU4_FREQ_LOW	 	"1402000\n"
