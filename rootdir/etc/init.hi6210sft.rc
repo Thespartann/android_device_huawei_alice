@@ -660,6 +660,9 @@ on boot
     chown system system /sys/touchscreen/response
     chown system system /sys/touchscreen/status
 
+    chown system system /sys/devices/virtual/graphics/fb0/mode
+    chmod 0660 /sys/devices/virtual/graphics/fb0/mode
+
     write /proc/sys/kernel/hung_task_panic 1
     write /proc/sys/kernel/hung_task_timeout_secs 120
     write /sys/kernel/hungtask/monitorlist "whitelist,system_server,surfaceflinger"

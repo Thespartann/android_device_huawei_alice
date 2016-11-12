@@ -38,6 +38,7 @@
 #endif
 
 static int low_power = 0;
+static int dt2w = 0;
 
 static void write_string(char * path, char * value) {
     int fd = open(path, O_WRONLY);
@@ -65,6 +66,8 @@ static void power_init(struct power_module *module)
     write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_MAX);
     write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
     write_string(DDR_FREQ_POLL_PATH,"50\n");
+    /* Meticulus: Perhaps not prudent to do this here... */
+    write_string(FB0_MODE_PATH,FB0_MODE);
 }
 
 static void power_set_interactive(struct power_module *module, int on) {
@@ -80,7 +83,8 @@ static void power_set_interactive(struct power_module *module, int on) {
 	    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_LOW);
 	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);
 	    write_string(GPU_FREQ_POLL_PATH,"12000\n");
-	    write_string(DDR_FREQ_POLL_PATH,"12000\n");
+	    write_string(DDR_FREQ_POLL_PATH,"12000\n"); 
+	    write_string(WAKE_ENABLE_PATH,"1\n");
 	}
 }
 
@@ -190,9 +194,43 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		DEBUG_LOG("POWER_HINT_PROFILE %d", var);
 		ALOGI("Meticulus: POWER_SET_PROFILE is used! Implement!");
 		break;
-    default:
+        default:
 		ALOGE("Unknown power hint %d", hint);
-        break;
+        	break;
+    }
+}
+
+static void set_dt2w(int on) {
+    dt2w = on;
+    if(on)
+	write_string(WAKE_CONF_PATH,"1\n");
+    else 
+	write_string(WAKE_CONF_PATH,"0\n");
+}
+
+static int get_feature(struct power_module *module, feature_t feature) {
+
+    int retval = 0;
+    switch(feature) {
+	case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
+	    retval = 1;
+	    break;
+        default:
+	    ALOGE("Unknown feature %d", feature);
+            break;
+    }
+    return retval;
+}
+
+static void set_feature(struct power_module *module, feature_t feature, int state) {
+    
+    switch(feature) {
+	case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
+	    set_dt2w(state);
+	    break;
+        default:
+	    ALOGE("Unknown feature %d", feature);
+            break;
     }
 }
 
@@ -214,4 +252,6 @@ struct power_module HAL_MODULE_INFO_SYM = {
     .init = power_init,
     .setInteractive = power_set_interactive,
     .powerHint = power_hint,
+    .setFeature = set_feature,
+    .getFeature = get_feature,
 };
