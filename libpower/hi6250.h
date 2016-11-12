@@ -18,7 +18,7 @@
 
 #define DDR_FREQ_MIN_PATH 	"/sys/class/devfreq/ddrfreq/min_freq"
 #define DDR_FREQ_MAX_PATH 	"/sys/class/devfreq/ddrfreq/max_freq"
-#define DDR_FREQ_POLL	 	"/sys/class/devfreq/ddrfreq/polling_interval"
+#define DDR_FREQ_POLL_PATH	"/sys/class/devfreq/ddrfreq/polling_interval"
 #define DDR_FREQ_MAX	 	"933000000\n"
 #define DDR_FREQ_BOOST	 	"800000000\n"
 #define DDR_FREQ_NORMAL	 	"533000000\n"
@@ -26,6 +26,7 @@
 
 #define GPU_FREQ_MIN_PATH 	"/sys/class/devfreq/gpufreq/min_freq"
 #define GPU_FREQ_MAX_PATH 	"/sys/class/devfreq/gpufreq/max_freq"
+#define GPU_FREQ_POLL_PATH 	"/sys/class/devfreq/gpufreq/polling_interval"
 #define GPU_ANIM_BOOST_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/animation_boost"
 #define GPU_FREQ_MAX	 	"900000000\n"
 #define GPU_FREQ_BOOST	 	"800000000\n"

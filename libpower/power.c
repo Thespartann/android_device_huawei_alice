@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2012 The Android Open Source Project
  * Copyright (C) 2016 Jonathan Jason Dennis [Meticulus]
- *								theonejohnnyd@gmail.com
+ *					theonejohnnyd@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,8 +59,12 @@ static void power_init(struct power_module *module)
 		ALOGE("init");
 #endif
 
-    //write_string(CPU0_GOV_PATH,"interactive\n");
-
+    write_string(GPU_FREQ_MAX_PATH,GPU_FREQ_MAX);
+    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
+    write_string(GPU_FREQ_POLL_PATH,"50\n");
+    write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_MAX);
+    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+    write_string(DDR_FREQ_POLL_PATH,"50\n");
 }
 
 static void power_set_interactive(struct power_module *module, int on) {
@@ -70,9 +74,13 @@ static void power_set_interactive(struct power_module *module, int on) {
 	if(on && !low_power) {
 	    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
 	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+	    write_string(GPU_FREQ_POLL_PATH,"3000\n");
+	    write_string(DDR_FREQ_POLL_PATH,"3000\n");
 	} else {
 	    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_LOW);
-	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);	
+	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);
+	    write_string(GPU_FREQ_POLL_PATH,"12000\n");
+	    write_string(DDR_FREQ_POLL_PATH,"12000\n");
 	}
 }
 
@@ -97,9 +105,13 @@ static void power_hint_vsync(int on) {
 	if(on) {
 	    write_string(DDR_FREQ_MIN_PATH, DDR_FREQ_BOOST);
 	    write_string(GPU_FREQ_MIN_PATH, GPU_FREQ_BOOST);
+	    write_string(GPU_FREQ_POLL_PATH,"1000\n");
+	    write_string(DDR_FREQ_POLL_PATH,"1000\n");
 	} else {
 	    write_string(DDR_FREQ_MIN_PATH, DDR_FREQ_NORMAL);
 	    write_string(GPU_FREQ_MIN_PATH, GPU_FREQ_NORMAL);
+	    write_string(GPU_FREQ_POLL_PATH,"3000\n");
+	    write_string(DDR_FREQ_POLL_PATH,"3000\n");
 	}
 }
 
@@ -112,6 +124,8 @@ static void power_hint_low_power(int on) {
 	write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_LOW);
 	write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_LOW);
 	write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);
+	write_string(GPU_FREQ_POLL_PATH,"0\n");
+	write_string(DDR_FREQ_POLL_PATH,"0\n");
     } else {
 	write_string(CPU0_FREQ_MAX_PATH,CPU0_FREQ_MAX);
 	write_string(CPU0_FREQ_MIN_PATH,CPU0_FREQ_LOW);
@@ -119,6 +133,8 @@ static void power_hint_low_power(int on) {
 	write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
 	write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_MAX);
 	write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+	write_string(GPU_FREQ_POLL_PATH,"3000\n");
+	write_string(DDR_FREQ_POLL_PATH,"3000\n");
     }
 }
 
