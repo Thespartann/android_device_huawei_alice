@@ -29,7 +29,7 @@
 
 #include "hi6250.h"
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DEBUG_LOG(x...) ALOGD(x)
