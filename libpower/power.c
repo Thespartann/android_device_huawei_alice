@@ -39,6 +39,7 @@
 
 static int low_power = 0;
 static int dt2w = 0;
+static struct power_profile * profile = &balanced; 
 
 static void write_string(char * path, char * value) {
     int fd = open(path, O_WRONLY);
@@ -56,43 +57,43 @@ static void write_string(char * path, char * value) {
 
 static void power_init(struct power_module *module)
 {
-#ifdef DEBUG
-		ALOGE("init");
-#endif
 
-    write_string(GPU_FREQ_MAX_PATH,GPU_FREQ_MAX);
-    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
+    DEBUG_LOG("init");
+
+    write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
+    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
     write_string(GPU_FREQ_POLL_PATH,"50\n");
-    write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_MAX);
-    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+    write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
+    write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
     write_string(DDR_FREQ_POLL_PATH,"50\n");
     /* Meticulus: Perhaps not prudent to do this here... */
     write_string(FB0_MODE_PATH,FB0_MODE);
 }
 
 static void power_set_interactive(struct power_module *module, int on) {
-#ifdef DEBUG
-		ALOGE("set_interactive %d", on);
-#endif
+	DEBUG_LOG("set_interactive %d", on);
 	if(on && !low_power) {
-	    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
-	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_normal);
+	    write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_normal);
 	    write_string(GPU_FREQ_POLL_PATH,"3000\n");
 	    write_string(DDR_FREQ_POLL_PATH,"3000\n");
 	} else {
-	    write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_LOW);
-	    write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);
+	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+	    write_string(DDR_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	    write_string(GPU_FREQ_POLL_PATH,"12000\n");
-	    write_string(DDR_FREQ_POLL_PATH,"12000\n"); 
-	    write_string(WAKE_ENABLE_PATH,"1\n");
+	    write_string(DDR_FREQ_POLL_PATH,"12000\n");
+            if(dt2w) write_string(WAKE_ENABLE_PATH,"1\n");
 	}
 }
 
 static void power_hint_cpu_boost(int dur) {
     char sdur[255];
 
+    if(!(* profile).cpu0_should_boost)
+	return;
+
     if(!dur)
-	dur = CPU0_BOOST_P_DUR_DEF;
+	dur = (* profile).cpu0_boost_p_dur_def;
 	
     sprintf(sdur, "%d\n", dur);
     write_string(CPU0_BOOST_P_DUR_PATH,sdur); 
@@ -100,45 +101,78 @@ static void power_hint_cpu_boost(int dur) {
 }
 
 static void power_hint_interactive(int on) {
-	power_hint_cpu_boost(on);
+	if(!(* profile).gpu_should_boost)
+	    return;
 	write_string(GPU_ANIM_BOOST_PATH,"1\n");
 
 }
 
 static void power_hint_vsync(int on) {
 	if(on) {
-	    write_string(DDR_FREQ_MIN_PATH, DDR_FREQ_BOOST);
-	    write_string(GPU_FREQ_MIN_PATH, GPU_FREQ_BOOST);
-	    write_string(GPU_FREQ_POLL_PATH,"1000\n");
-	    write_string(DDR_FREQ_POLL_PATH,"1000\n");
+	    if((* profile).gpu_should_boost) {
+	    	write_string(GPU_FREQ_MIN_PATH, (* profile).gpu_freq_boost);
+	    	write_string(GPU_FREQ_POLL_PATH,"1000\n");
+	    }
+	    if((* profile).ddr_should_boost) {
+	    	write_string(DDR_FREQ_MIN_PATH, (* profile).ddr_freq_boost);
+	    	write_string(DDR_FREQ_POLL_PATH,"1000\n");
+	    }
 	} else {
-	    write_string(DDR_FREQ_MIN_PATH, DDR_FREQ_NORMAL);
-	    write_string(GPU_FREQ_MIN_PATH, GPU_FREQ_NORMAL);
-	    write_string(GPU_FREQ_POLL_PATH,"3000\n");
-	    write_string(DDR_FREQ_POLL_PATH,"3000\n");
+	    if((* profile).gpu_should_boost) {
+	        write_string(GPU_FREQ_MIN_PATH, (* profile).gpu_freq_normal);
+	        write_string(GPU_FREQ_POLL_PATH,"3000\n");
+	    }
+	    if((* profile).ddr_should_boost) {
+	        write_string(DDR_FREQ_MIN_PATH, (* profile).ddr_freq_normal);
+	        write_string(DDR_FREQ_POLL_PATH,"3000\n");
+            }
 	}
 }
 
 static void power_hint_low_power(int on) {
     low_power = on;
     if(on) {
-	write_string(CPU0_FREQ_MAX_PATH,CPU0_FREQ_LOW);
-	write_string(CPU0_FREQ_MIN_PATH,CPU0_FREQ_LOW);
-	write_string(GPU_FREQ_MAX_PATH,GPU_FREQ_LOW);
-	write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_LOW);
-	write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_LOW);
-	write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_LOW);
+	write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_low);
+	write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
+	write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_low);
+	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+	write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_low);
+	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
 	write_string(GPU_FREQ_POLL_PATH,"0\n");
 	write_string(DDR_FREQ_POLL_PATH,"0\n");
     } else {
-	write_string(CPU0_FREQ_MAX_PATH,CPU0_FREQ_MAX);
-	write_string(CPU0_FREQ_MIN_PATH,CPU0_FREQ_LOW);
-	write_string(GPU_FREQ_MAX_PATH,GPU_FREQ_MAX);
-	write_string(GPU_FREQ_MIN_PATH,GPU_FREQ_NORMAL);
-	write_string(DDR_FREQ_MAX_PATH,DDR_FREQ_MAX);
-	write_string(DDR_FREQ_MIN_PATH,DDR_FREQ_NORMAL);
+	write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_max);
+	write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
+	write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
+	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_normal);
+	write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
+	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
 	write_string(GPU_FREQ_POLL_PATH,"3000\n");
 	write_string(DDR_FREQ_POLL_PATH,"3000\n");
+    }
+}
+
+static void power_hint_set_profile(struct power_module *module, int p) {
+
+    switch(p) {
+	case 0:
+	    profile = &power_save;
+	    power_init(module);
+	    ALOGI("Set power save profile.");
+	    break;
+	case 1:
+	    profile = &balanced;
+	    power_init(module);
+	    ALOGI("Set balanced profile.");
+	    break;
+	case 2:
+	    profile = &performance;
+	    power_init(module);
+	    ALOGI("Set performance profile.");
+	    break;
+        default:
+	    ALOGE("Unknown power profile %d", p);
+	    break;
     }
 }
 
@@ -191,8 +225,11 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		ALOGI("Meticulus: POWER_HINT_AUDIO is used! Implement!");
 		break;
 	case POWER_HINT_SET_PROFILE:
+		if(data != NULL)
+		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_PROFILE %d", var);
-		ALOGI("Meticulus: POWER_SET_PROFILE is used! Implement!");
+		ALOGI("Meticulus: POWER_SET_PROFILE %d",var);
+                power_hint_set_profile(module,var);
 		break;
         default:
 		ALOGE("Unknown power hint %d", hint);
@@ -215,6 +252,9 @@ static int get_feature(struct power_module *module, feature_t feature) {
 	case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
 	    retval = 1;
 	    break;
+	case POWER_FEATURE_SUPPORTED_PROFILES:
+	    retval = 3;
+	    break;
         default:
 	    ALOGE("Unknown feature %d", feature);
             break;
@@ -227,6 +267,9 @@ static void set_feature(struct power_module *module, feature_t feature, int stat
     switch(feature) {
 	case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
 	    set_dt2w(state);
+	    break;
+	case POWER_FEATURE_SUPPORTED_PROFILES:
+	    ALOGI("POWER_FEATURE_SUPPORTED_PROFILES: %d",state);
 	    break;
         default:
 	    ALOGE("Unknown feature %d", feature);
