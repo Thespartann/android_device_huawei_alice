@@ -49,13 +49,11 @@
 /* Start profile power_save  */
 
 #define DDR_FREQ_MAX_0	 	"360000000\n"
-#define DDR_FREQ_BOOST_0 	"0\n"
-#define DDR_FREQ_NORMAL_0 	"360000000\n"
+#define DDR_FREQ_BOOST_0 	"360000000\n"
 #define DDR_FREQ_LOW_0	 	"120000000\n"
 
 #define GPU_FREQ_MAX_0	 	"360000000\n"
-#define GPU_FREQ_BOOST_0 	"0\n"
-#define GPU_FREQ_NORMAL_0 	"120000000\n"
+#define GPU_FREQ_BOOST_0 	"360000000\n"
 #define GPU_FREQ_LOW_0	 	"120000000\n"
 
 #define CPU0_BOOST_P_DUR_DEF_0	1
@@ -71,12 +69,10 @@
 
 #define DDR_FREQ_MAX_1	 	"533000000\n"
 #define DDR_FREQ_BOOST_1 	"533000000\n"
-#define DDR_FREQ_NORMAL_1 	"360000000\n"
 #define DDR_FREQ_LOW_1	 	"120000000\n"
 
 #define GPU_FREQ_MAX_1	 	"680000000\n"
 #define GPU_FREQ_BOOST_1 	"480000000\n"
-#define GPU_FREQ_NORMAL_1 	"120000000\n"
 #define GPU_FREQ_LOW_1	 	"120000000\n"
 
 #define CPU0_BOOST_P_DUR_DEF_1	4000
@@ -92,12 +88,10 @@
 
 #define DDR_FREQ_MAX_2	 	"933000000\n"
 #define DDR_FREQ_BOOST_2 	"800000000\n"
-#define DDR_FREQ_NORMAL_2 	"533000000\n"
 #define DDR_FREQ_LOW_2	 	"120000000\n"
 
 #define GPU_FREQ_MAX_2	 	"900000000\n"
 #define GPU_FREQ_BOOST_2 	"800000000\n"
-#define GPU_FREQ_NORMAL_2 	"120000000\n"
 #define GPU_FREQ_LOW_2	 	"120000000\n"
 
 #define CPU0_BOOST_P_DUR_DEF_2	8000
@@ -119,12 +113,10 @@ struct power_profile {
     const char * cpu4_freq_low;
     const char * gpu_freq_max;
     const char * gpu_freq_boost;
-    const char * gpu_freq_normal;
     const char * gpu_freq_low;
     const int    gpu_should_boost;
     const char * ddr_freq_max;
     const char * ddr_freq_boost;
-    const char * ddr_freq_normal;
     const char * ddr_freq_low;
     const int	 ddr_should_boost;
 };
@@ -138,12 +130,10 @@ struct power_profile power_save  = {
     .cpu4_freq_low = CPU4_FREQ_LOW_0,
     .gpu_freq_max = GPU_FREQ_MAX_0,
     .gpu_freq_boost = GPU_FREQ_BOOST_0,
-    .gpu_freq_normal = GPU_FREQ_NORMAL_0,
     .gpu_freq_low = GPU_FREQ_LOW_0,
     .gpu_should_boost = 0,
     .ddr_freq_max = DDR_FREQ_MAX_0,
     .ddr_freq_boost = DDR_FREQ_BOOST_0,
-    .ddr_freq_normal = DDR_FREQ_NORMAL_0,
     .ddr_freq_low = DDR_FREQ_LOW_0,
     .ddr_should_boost = 0,
 };
@@ -152,17 +142,15 @@ struct power_profile balanced = {
     .cpu0_freq_max = CPU0_FREQ_MAX_1,
     .cpu0_freq_low = CPU0_FREQ_LOW_1,
     .cpu0_boost_p_dur_def = CPU0_BOOST_P_DUR_DEF_1,
-    .cpu0_should_boost = 0,
+    .cpu0_should_boost = 1,
     .cpu4_freq_max = CPU4_FREQ_MAX_1,
     .cpu4_freq_low = CPU4_FREQ_LOW_1,
     .gpu_freq_max = GPU_FREQ_MAX_1,
     .gpu_freq_boost = GPU_FREQ_BOOST_1,
-    .gpu_freq_normal = GPU_FREQ_NORMAL_1,
     .gpu_freq_low = GPU_FREQ_LOW_1,
     .gpu_should_boost = 1,
     .ddr_freq_max = DDR_FREQ_MAX_1,
     .ddr_freq_boost = DDR_FREQ_BOOST_1,
-    .ddr_freq_normal = DDR_FREQ_NORMAL_1,
     .ddr_freq_low = DDR_FREQ_LOW_1,
     .ddr_should_boost = 1,
 };
@@ -176,12 +164,10 @@ struct power_profile performance = {
     .cpu4_freq_low = CPU4_FREQ_LOW_2,
     .gpu_freq_max = GPU_FREQ_MAX_2,
     .gpu_freq_boost = GPU_FREQ_BOOST_2,
-    .gpu_freq_normal = GPU_FREQ_NORMAL_2,
     .gpu_freq_low = GPU_FREQ_LOW_2,
     .gpu_should_boost = 1,
     .ddr_freq_max = DDR_FREQ_MAX_2,
     .ddr_freq_boost = DDR_FREQ_BOOST_2,
-    .ddr_freq_normal = DDR_FREQ_NORMAL_2,
     .ddr_freq_low = DDR_FREQ_LOW_2,
     .ddr_should_boost = 1,
 };

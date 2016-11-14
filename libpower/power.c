@@ -20,7 +20,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
+#include <unistd.h>
 #define LOG_TAG "Met-Dev Hisi PowerHAL"
 #include <utils/Log.h>
 
@@ -58,14 +58,16 @@ static void write_string(char * path, char * value) {
 static void power_init(struct power_module *module)
 {
 
-    DEBUG_LOG("init");
-
-    write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
+    DEBUG_LOG("init"); 
     write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+    usleep(500);
+    write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
     write_string(GPU_FREQ_POLL_PATH,"50\n");
-    write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
     write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
+    usleep(500);
+    write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
     write_string(DDR_FREQ_POLL_PATH,"50\n");
+ 
     /* Meticulus: Perhaps not prudent to do this here... */
     write_string(FB0_MODE_PATH,FB0_MODE);
 }
@@ -73,8 +75,8 @@ static void power_init(struct power_module *module)
 static void power_set_interactive(struct power_module *module, int on) {
 	DEBUG_LOG("set_interactive %d", on);
 	if(on && !low_power) {
-	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_normal);
-	    write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_normal);
+	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+	    write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
 	    write_string(GPU_FREQ_POLL_PATH,"3000\n");
 	    write_string(DDR_FREQ_POLL_PATH,"3000\n");
 	} else {
@@ -119,11 +121,11 @@ static void power_hint_vsync(int on) {
 	    }
 	} else {
 	    if((* profile).gpu_should_boost) {
-	        write_string(GPU_FREQ_MIN_PATH, (* profile).gpu_freq_normal);
+	        write_string(GPU_FREQ_MIN_PATH, (* profile).gpu_freq_low);
 	        write_string(GPU_FREQ_POLL_PATH,"3000\n");
 	    }
 	    if((* profile).ddr_should_boost) {
-	        write_string(DDR_FREQ_MIN_PATH, (* profile).ddr_freq_normal);
+	        write_string(DDR_FREQ_MIN_PATH, (* profile).ddr_freq_low);
 	        write_string(DDR_FREQ_POLL_PATH,"3000\n");
             }
 	}
@@ -144,7 +146,7 @@ static void power_hint_low_power(int on) {
 	write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_max);
 	write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
 	write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
-	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_normal);
+	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
 	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
 	write_string(GPU_FREQ_POLL_PATH,"3000\n");
@@ -227,8 +229,7 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 	case POWER_HINT_SET_PROFILE:
 		if(data != NULL)
 		    var = *(int *) data;
-		DEBUG_LOG("POWER_HINT_PROFILE %d", var);
-		ALOGI("Meticulus: POWER_SET_PROFILE %d",var);
+		DEBUG_LOG("POWER_HINT_PROFILE %d", var);	
                 power_hint_set_profile(module,var);
 		break;
         default:
