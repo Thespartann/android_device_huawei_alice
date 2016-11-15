@@ -58,7 +58,10 @@ static void write_string(char * path, char * value) {
 static void power_init(struct power_module *module)
 {
 
-    DEBUG_LOG("init"); 
+    DEBUG_LOG("init");
+ 
+    write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_max);
+    write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
     write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
     usleep(500);
     write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
