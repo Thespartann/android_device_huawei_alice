@@ -39,7 +39,7 @@
 
 static int low_power = 0;
 static int dt2w = 0;
-static struct power_profile * profile = &balanced; 
+static struct power_profile * profile = &performance; 
 
 static void write_string(char * path, char * value) {
     int fd = open(path, O_WRONLY);
