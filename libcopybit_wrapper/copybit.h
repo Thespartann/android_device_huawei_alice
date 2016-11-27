@@ -212,18 +212,6 @@ struct copybit_device_t {
                 struct copybit_region_t const *region);
 
     /**
-     * Give acquire fence to copybit to be used in upcoming stretch
-     * call
-     *
-     * @param dev from open
-     * @param acquireFenceFd is the acquire fence
-     *
-     * @return 0 if successful
-     */
-    int (*set_sync)(struct copybit_device_t *dev,
-                   int acquireFenceFd);
-
-    /**
      * Execute the stretch bit blit copy operation
      *
      * @param dev from open
@@ -241,6 +229,18 @@ struct copybit_device_t {
                    struct copybit_rect_t const *dst_rect,
                    struct copybit_rect_t const *src_rect,
                    struct copybit_region_t const *region);
+
+    /**
+     * Give acquire fence to copybit to be used in upcoming stretch
+     * call
+     *
+     * @param dev from open
+     * @param acquireFenceFd is the acquire fence
+     *
+     * @return 0 if successful
+     */
+    int (*set_sync)(struct copybit_device_t *dev,
+                   int acquireFenceFd);
 
     /**
      * Fill the rect on dst with RGBA color
