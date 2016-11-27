@@ -34,8 +34,6 @@
 
 #include "copybit.h"
 
-static int need_finish = 0;
-
 static hw_module_t *real_module;
 static hw_device_t *real_device;
 
@@ -144,7 +142,6 @@ static int stretch_copybit(
     dump_rect(dst_rect,"dst_rect");
     dump_rect(src_rect,"src_rect");
 #endif
-    need_finish = 1;
     return real_stretch(real_device,dst,src,dst_rect,src_rect,region);
 }
 
@@ -168,13 +165,10 @@ static int finish_copybit(struct copybit_device_t *dev)
 #ifdef DEBUG
     ALOGD("%s enter",__func__);
 #endif
-    if(need_finish) {
-        need_finish = 0;
-    	real_finish(real_device);
-        return 0;
-    } else {
-	return 0;
-    }
+    /* Meticulus: mitigate crash
+     * by not calling the real_finish
+     */ 
+    return 0;
 }
 static int clear_copybit(struct copybit_device_t *dev,
                          struct copybit_image_t const *buf,
