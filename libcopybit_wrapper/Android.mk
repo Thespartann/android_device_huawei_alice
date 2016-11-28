@@ -28,4 +28,6 @@ LOCAL_SHARED_LIBRARIES := liblog libcutils
 LOCAL_SRC_FILES := copybit.cpp copybit_interface.cpp dump.cpp
 LOCAL_MODULE := libcopybit_wrapper
 LOCAL_CFLAGS:= -DLOG_TAG=\"copybit_wrapper\"
+# Install the symlinks.
+LOCAL_POST_INSTALL_CMD := mkdir -p $(TARGET_OUT)/lib/hw; mkdir -p $(TARGET_OUT)/lib64/hw; ln -sf ../libcopybit_wrapper.so $(TARGET_OUT)/lib64/hw/copybit.hi6250.so; ln -sf ../libcopybit_wrapper.so $(TARGET_OUT)/lib/hw/copybit.hi6250.so;
 include $(BUILD_SHARED_LIBRARY)
