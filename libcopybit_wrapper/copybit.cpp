@@ -70,7 +70,7 @@ struct copybit_context_t {
     struct copybit_device_t device; 
 };
 
-#define DEBUG
+//#define DEBUG
 
 static int open_copybit(const struct hw_module_t* module, const char* name,
                         struct hw_device_t** device);
@@ -121,7 +121,7 @@ static int get(struct copybit_device_t *dev, int name)
 static int set_sync_copybit(struct copybit_device_t *dev,
     int acquireFenceFd)
 {
-    ALOGD("Meticulus: %s acquireFenceFd=%d",__func__,acquireFenceFd);
+    ALOGD("%s acquireFenceFd=%d",__func__,acquireFenceFd);
     return real_set_sync(real_device,acquireFenceFd);
     return 0;
 }
@@ -200,8 +200,7 @@ static int close_copybit(struct hw_device_t *dev)
 #ifdef DEBUG
     ALOGD("%s enter",__func__);
 #endif
-    return close_real_copybit(real_device);	
-    //return 0;
+    return close_real_copybit(real_device);
 }
 
 static int flush_get_fence(struct copybit_device_t *dev, int* fd)
