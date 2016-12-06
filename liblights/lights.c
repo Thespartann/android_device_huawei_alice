@@ -175,8 +175,6 @@ static int open_lights(const struct hw_module_t *module, char const *name, struc
         	set_light = set_light_notifications;
 	else if (0 == strcmp(LIGHT_ID_BATTERY, name))
         	set_light = set_light_notifications;
-	else if (0 == strcmp(LIGHT_ID_ATTENTION, name))
-        	set_light = set_light_notifications;
 	else
 		return -EINVAL;
 
