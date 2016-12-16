@@ -92,6 +92,15 @@ static int set_light_backlight(struct light_device_t *dev, struct light_state_t 
     return err;
 }
 
+static void stop_blink(void) {
+    write_int(RED_DELAYON_FILE, 0);
+    write_int(RED_DELAYOFF_FILE, 0);
+    write_int(GREEN_DELAYON_FILE, 0);
+    write_int(GREEN_DELAYOFF_FILE, 0);
+    write_int(BLUE_DELAYON_FILE, 0);
+    write_int(BLUE_DELAYOFF_FILE, 0);
+}
+
 static void set_light_color(int color) {
     char scolor[255];
     char alpha[3], red[3], green[3], blue[3];
@@ -111,6 +120,8 @@ static void set_light_color(int color) {
     ired = strtol(red,NULL,16);
     igreen = strtol(green,NULL,16);
     iblue = strtol(blue,NULL,16);
+
+    stop_blink();
 
     write_int(RED_BRIGHTNESS_FILE,ired);
     write_int(GREEN_BRIGHTNESS_FILE,igreen);
@@ -146,13 +157,7 @@ static void set_blink(struct light_state_t const* state) {
 				state->brightnessMode,
 				state->ledsModes);
 #endif 
-    write_int(RED_DELAYON_FILE, 0);
-    write_int(RED_DELAYOFF_FILE, 0);
-    write_int(GREEN_DELAYON_FILE, 0);
-    write_int(GREEN_DELAYOFF_FILE, 0);
-    write_int(BLUE_DELAYON_FILE, 0);
-    write_int(BLUE_DELAYOFF_FILE, 0);
-
+    stop_blink();
     if(!state->flashMode) return;
 
     if(ired > igreen && ired > iblue) {
