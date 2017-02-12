@@ -180,6 +180,8 @@ static int clear_copybit(struct copybit_device_t *dev,
     return real_clear(real_device,buf,rect);
 }
 
+static int fill_color_once;
+
 /** Fill the rect on dst with RGBA color **/
 static int fill_color(struct copybit_device_t *dev,
                       struct copybit_image_t const *dst,
@@ -189,7 +191,9 @@ static int fill_color(struct copybit_device_t *dev,
 #ifdef DEBUG
     ALOGD("%s enter",__func__);
 #endif
-    return real_fill_color(real_device,dst,rect,color);
+    if(!fill_color_once)
+	fill_color_once = real_fill_color(real_device,dst,rect,color);
+    return fill_color_once;
 }
 
 /*****************************************************************************/
