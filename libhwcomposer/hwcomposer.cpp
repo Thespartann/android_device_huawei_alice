@@ -43,7 +43,7 @@
 
 #ifdef FAKE_VSYNC
 #ifndef REFRESH_RATE
-#define REFRESH_RATE (65.0)
+#define REFRESH_RATE (60.0)
 #endif // REFRESH_RATE
 #define REFRESH_PERIOD ((int64_t)(NSEC_PER_SEC / REFRESH_RATE))
 
@@ -57,15 +57,16 @@
 #define DEBUG_LOG(x...) do {} while(0)
 #endif
 
-static int vsync = 0;
-static hwc_procs_t const *hwc_procs;
 static pthread_t vthread;
 static pthread_attr_t attr;
-static int vthread_running = 0;
 struct hwc_context_t {
     hwc_composer_device_1_t device;
     /* our private state goes below here */
+    hwc_procs_t const *hwc_procs;
     int fd;
+    int vsyncfd;
+    int vsync_on;
+    int vthread_running;
 };
 
 static void write_string(const char * path, const char * value) {
@@ -129,9 +130,9 @@ static int hwc_prepare(hwc_composer_device_1_t *dev,
 static int hwc_set(hwc_composer_device_1_t *dev,
         size_t numDisplays, hwc_display_contents_1_t** displays)
 {
-    //for (size_t i=0 ; i<list->numHwLayers ; i++) {
-    //    dump_layer(&list->hwLayers[i]);
-    //}
+    /*for (size_t i=0 ; i<list->numHwLayers ; i++) {
+        dump_layer(&list->hwLayers[i]);
+    }*/
 
     EGLBoolean sucess = eglSwapBuffers((EGLDisplay)displays[0]->dpy,
             (EGLSurface)displays[0]->sur);
@@ -142,60 +143,38 @@ static int hwc_set(hwc_composer_device_1_t *dev,
 }
 
 static void * vsync_thread(void * arg) {
-   DEBUG_LOG("VSYNC THREAD ENTER");
-   vthread_running = 1;
-   int retval = -1;
-   int fd = -1;
-   struct timeval tv;
-   int64_t last_timestamp = 0;
-   int64_t timestamp = 0;
-   int size = strlen("VSYNC=371877064004, xxxxxxevent=x\n");
-   char read_result[size];
    setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
-   fd_set read_set;
-   while(vsync) {
-        fd = open("/sys/devices/virtual/graphics/fb0/vsync_event", O_RDONLY);
-	if(fd < 0) {
-	    ALOGE("Could not open vsync_event!!!");
-            break;
-        }
-	/* Intialize the read descriptor */
-	FD_ZERO(&read_set);
-	FD_SET(fd,&read_set);
-	/* Wait up to 0.5 seconds. */
-	tv.tv_sec = 0 ;
-	tv.tv_usec = 5000;
-	retval = select(fd+1, &read_set, NULL, NULL, &tv);
-	if (retval > 0) {
-	    if(FD_ISSET(fd,&read_set)) {
-		if( read(fd,read_result,size) == size) {
-		    read_result[17] = '\0';
-            	    const char * stime = read_result + 6;
-		    DEBUG_LOG("VSYNC s=%s",stime);
-		    timestamp = atol(stime);
-		    DEBUG_LOG("VSYNC l=%lu",timestamp);
-	            hwc_procs->vsync(hwc_procs, 0, timestamp);
-		}
-	    }
-	}
-        close(fd);
+   DEBUG_LOG("vsync thread enter");
+   struct hwc_context_t *context = (hwc_context_t *)arg;
+   context->vthread_running = 1;
+   int retval = -1;
+   int64_t timestamp = 0;
+   char read_result[20];
+
+   while(context->vsync_on) {
+	if(pread(context->vsyncfd,read_result,20,0)) {
+	    timestamp = atol(read_result);
+	    context->hwc_procs->vsync(context->hwc_procs, 0, timestamp);
+	    usleep(18000);
+	} else { goto error; }
    }
-   vthread_running = 0;
-   DEBUG_LOG("VSYNC THREAD EXIT");
+
+   retval = 0;
+error:
+   context->vthread_running = 0;
+   DEBUG_LOG("vsync thread exit");
    return &retval; 
 
 }
 
 static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
             int event, int enabled) {
-    DEBUG_LOG("hwc_event_control %d", event);
     if(event == HWC_EVENT_VSYNC) {
-	DEBUG_LOG("HW_EVENT_VSYNC %d",enabled);
-	vsync = enabled;
-	ioctl(((hwc_context_t *)dev)->fd,HISIFB_VSYNC_CTRL, &vsync);
-	if(vsync && !vthread_running) {
-	    pthread_attr_init(&attr);
-	    pthread_create(&vthread,&attr,&vsync_thread,NULL);
+	struct hwc_context_t *context = (hwc_context_t *)dev;
+	context->vsync_on = enabled;
+	ioctl(((hwc_context_t *)dev)->fd,HISIFB_VSYNC_CTRL, &enabled);
+	if(!context->vthread_running) {
+	    pthread_create(&vthread,&attr,&vsync_thread,context);
 	}
     }
     return 0;
@@ -204,7 +183,8 @@ static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
 
 static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
     int ret = -1;
-    if(ret = ioctl(((hwc_context_t *)dev)->fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK))
+    ret = ioctl(((hwc_context_t *)dev)->fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
+    if(ret)
 	ALOGE("Could not %s framebuffer!", blank ? "blank" : "unblank?");
 
     DEBUG_LOG("blank called %d",blank);
@@ -213,7 +193,8 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
 
 static void register_procs(struct hwc_composer_device_1* dev,
             hwc_procs_t const* procs) {
-    hwc_procs = procs;
+
+    ((hwc_context_t *)dev)->hwc_procs = procs;
     DEBUG_LOG("procs registered");
 }
 
@@ -251,7 +232,7 @@ static int hwc_device_close(struct hw_device_t *dev)
 static int hwc_device_open(const struct hw_module_t* module, const char* name,
         struct hw_device_t** device)
 {
-    int status = -EINVAL;
+    int status = 0;
     if (!strcmp(name, HWC_HARDWARE_COMPOSER)) {
         struct hwc_context_t *dev;
         dev = (hwc_context_t*)malloc(sizeof(*dev));
@@ -271,8 +252,21 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
         dev->device.eventControl = hwc_event_control;
         dev->device.registerProcs = register_procs;
         dev->device.query = query;
+	dev->vthread_running = 0;
+	dev->vsync_on = 0;
 	dev->fd = status = open ("/dev/graphics/fb0", O_WRONLY);
+   	if(!dev->fd) {
+	    ALOGE("Could not open fb0 file!");
+	    status = -EINVAL;
+   	}
+   	dev->vsyncfd = open("/sys/devices/virtual/graphics/fb0/vsync_timestamp", O_RDONLY);
+   	if(!dev->vsyncfd) {
+	    ALOGE("Could not open vsync_event file!");
+	    status = -EINVAL;
+   	}
         *device = &dev->device.common;
+
+	pthread_attr_init(&attr);
     }
     return status;
 }
