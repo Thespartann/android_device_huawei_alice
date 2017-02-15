@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
-#define LOG_TAG "Met-Dev Hisi HWComposer"
+#define LOG_TAG "Met-Dev Hisi HWC"
 #include <cutils/log.h>
 #include <cutils/atomic.h>
 
@@ -86,18 +86,18 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
         struct hw_device_t** device);
 
 static struct hw_module_methods_t hwc_module_methods = {
-    open: hwc_device_open
+    .open = hwc_device_open
 };
 
 hwc_module_t HAL_MODULE_INFO_SYM = {
-    common: {
-        tag: HARDWARE_MODULE_TAG,
-        version_major: 1,
-        version_minor: 0,
-        id: HWC_HARDWARE_MODULE_ID,
-        name: "Met-Dev Hisi HWComposer",
-        author: "Meticulus Development",
-        methods: &hwc_module_methods,
+    .common = {
+        .tag = HARDWARE_MODULE_TAG,
+        .version_major = 1,
+        .version_minor = 0,
+        .id = HWC_HARDWARE_MODULE_ID,
+        .name = "Met-Dev Hisi HWComposer",
+        .author = "Meticulus Development",
+        .methods = &hwc_module_methods,
     }
 };
 
@@ -118,11 +118,12 @@ static void dump_layer(hwc_layer_1_t const* l) {
 
 static int hwc_prepare(hwc_composer_device_1_t *dev,
         size_t numDisplays, hwc_display_contents_1_t** displays) {
-    if (displays && (displays[0]->flags & HWC_GEOMETRY_CHANGED)) {
-        for (size_t i=0 ; i<displays[0]->numHwLayers ; i++) {
-            //dump_layer(&list->hwLayers[i]);
-            displays[0]->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
-        }
+    for(size_t j=0; j<numDisplays; j++) {
+	if (displays && (displays[j]->flags & HWC_GEOMETRY_CHANGED)) {
+	    for (size_t i=0 ; i<displays[j]->numHwLayers ; i++) {
+		displays[j]->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
+            }
+	}
     }
     return 0;
 }
@@ -133,11 +134,12 @@ static int hwc_set(hwc_composer_device_1_t *dev,
     /*for (size_t i=0 ; i<list->numHwLayers ; i++) {
         dump_layer(&list->hwLayers[i]);
     }*/
-
-    EGLBoolean sucess = eglSwapBuffers((EGLDisplay)displays[0]->dpy,
-            (EGLSurface)displays[0]->sur);
-    if (!sucess) {
-        return HWC_EGL_ERROR;
+    for(size_t j=0; j<numDisplays; j++) {
+	EGLBoolean sucess = eglSwapBuffers((EGLDisplay)displays[j]->dpy,
+		(EGLSurface)displays[j]->sur);
+	if (!sucess) {
+	    return HWC_EGL_ERROR;
+	}
     }
     return 0;
 }
@@ -155,7 +157,7 @@ static void * vsync_thread(void * arg) {
 	if(pread(context->vsyncfd,read_result,20,0)) {
 	    timestamp = atol(read_result);
 	    context->hwc_procs->vsync(context->hwc_procs, 0, timestamp);
-	    usleep(18000);
+	    usleep(16500);
 	} else { goto error; }
    }
 
@@ -170,6 +172,10 @@ error:
 static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
             int event, int enabled) {
     if(event == HWC_EVENT_VSYNC) {
+	if(disp) {
+	   ALOGE("Meticulus: How do I %s on display %d?", enabled ? "enable vsync" : "disable vysnc", disp);
+	   return -EINVAL;
+	}
 	struct hwc_context_t *context = (hwc_context_t *)dev;
 	context->vsync_on = enabled;
 	ioctl(((hwc_context_t *)dev)->fd,HISIFB_VSYNC_CTRL, &enabled);
@@ -183,9 +189,15 @@ static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
 
 static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
     int ret = -1;
-    ret = ioctl(((hwc_context_t *)dev)->fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
-    if(ret)
-	ALOGE("Could not %s framebuffer!", blank ? "blank" : "unblank?");
+    if(!disp) {
+        ret = ioctl(((hwc_context_t *)dev)->fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
+        if(ret)
+	    ALOGE("Could not %s framebuffer!", blank ? "blank" : "unblank?");
+
+    } else {
+	    ALOGE("Meticulus: How do I %s display %d?", blank ? "bank" : "unblank", disp);
+    }
+
 
     DEBUG_LOG("blank called %d",blank);
     return ret;
