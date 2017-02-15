@@ -17,7 +17,8 @@
  */
 
 #include <hardware/hardware.h>
-
+#include <utils/ThreadDefs.h>
+#include <utils/Timers.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -49,6 +50,9 @@
 
 #endif // FAKE_VSYNC
 
+#define FB_FILE "/dev/graphics/fb0"
+#define TIMESTAMP_FILE "/sys/devices/virtual/graphics/fb0/vsync_timestamp"
+
 //#define DEBUG
 
 #ifdef DEBUG
@@ -58,7 +62,6 @@
 #endif
 
 static pthread_t vthread;
-static pthread_attr_t attr;
 struct hwc_context_t {
     hwc_composer_device_1_t device;
     /* our private state goes below here */
@@ -67,6 +70,7 @@ struct hwc_context_t {
     int vsyncfd;
     int vsync_on;
     int vthread_running;
+    int fake_vsync;
 };
 
 static void write_string(const char * path, const char * value) {
@@ -145,7 +149,8 @@ static int hwc_set(hwc_composer_device_1_t *dev,
 }
 
 static void * vsync_thread(void * arg) {
-   setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
+   setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY +
+                android::PRIORITY_MORE_FAVORABLE);
    DEBUG_LOG("vsync thread enter");
    struct hwc_context_t *context = (hwc_context_t *)arg;
    context->vthread_running = 1;
@@ -153,12 +158,20 @@ static void * vsync_thread(void * arg) {
    int64_t timestamp = 0;
    char read_result[20];
 
-   while(context->vsync_on) {
-	if(pread(context->vsyncfd,read_result,20,0)) {
-	    timestamp = atol(read_result);
-	    context->hwc_procs->vsync(context->hwc_procs, 0, timestamp);
-	    usleep(16500);
-	} else { goto error; }
+   if(context->fake_vsync) {
+	while(context->vsync_on) {
+	    timestamp = systemTime();
+	    context->hwc_procs->vsync(context->hwc_procs,0,timestamp);
+	    usleep(16666);
+	}
+   } else {
+	while(context->vsync_on) {
+	    if(pread(context->vsyncfd,read_result,20,0)) {
+		timestamp = atol(read_result);
+		context->hwc_procs->vsync(context->hwc_procs, 0, timestamp);
+		usleep(16666);
+	    } else { goto error; }
+       }
    }
 
    retval = 0;
@@ -178,9 +191,10 @@ static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
 	}
 	struct hwc_context_t *context = (hwc_context_t *)dev;
 	context->vsync_on = enabled;
-	ioctl(((hwc_context_t *)dev)->fd,HISIFB_VSYNC_CTRL, &enabled);
+	if(!context->fake_vsync)
+		ioctl(((hwc_context_t *)dev)->fd,HISIFB_VSYNC_CTRL, &enabled);
 	if(!context->vthread_running) {
-	    pthread_create(&vthread,&attr,&vsync_thread,context);
+	    pthread_create(&vthread,NULL,&vsync_thread,context);
 	}
     }
     return 0;
@@ -266,19 +280,18 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
         dev->device.query = query;
 	dev->vthread_running = 0;
 	dev->vsync_on = 0;
-	dev->fd = status = open ("/dev/graphics/fb0", O_WRONLY);
-   	if(!dev->fd) {
+	dev->fake_vsync = 0;
+	dev->fd = status = open (FB_FILE, O_WRONLY);
+	if(dev->fd < 0) {
 	    ALOGE("Could not open fb0 file!");
 	    status = -EINVAL;
    	}
-   	dev->vsyncfd = open("/sys/devices/virtual/graphics/fb0/vsync_timestamp", O_RDONLY);
-   	if(!dev->vsyncfd) {
-	    ALOGE("Could not open vsync_event file!");
-	    status = -EINVAL;
+	dev->vsyncfd = open(TIMESTAMP_FILE, O_RDONLY);
+	if(dev->vsyncfd < 0) {
+	    ALOGW("Using fake vsync...");
+	    dev->fake_vsync = 1;
    	}
         *device = &dev->device.common;
-
-	pthread_attr_init(&attr);
     }
     return status;
 }
