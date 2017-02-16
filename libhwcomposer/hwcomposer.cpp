@@ -73,6 +73,8 @@ struct fb_ctx_t {
     int fake_vsync;
     pthread_t vthread;
     hwc_procs_t const *hwc_procs;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 };
 
 struct hwc_context_t {
@@ -168,13 +170,29 @@ static void * vsync_thread(void * arg) {
    int64_t timestamp = 0;
    char read_result[20];
    if(fb->fake_vsync) {
-	while(fb->vsync_on) {
+	while(true) {
+	    if(!fb->vsync_on) {
+		DEBUG_LOG("vsync thread sleeping id = %d fake = 1");
+		while(!fb->vsync_on)
+		    pthread_cond_wait(&fb->cond,&fb->mutex);
+		DEBUG_LOG("vsync thread woke up id = %d fake = 1");
+		if(!fb->vsync_on)
+		    continue;
+	    }
 	    timestamp = systemTime();
 	    fb->hwc_procs->vsync(fb->hwc_procs,fb->id,timestamp);
 	    usleep(16666);
 	}
    } else {
-	while(fb->vsync_on) {
+	while(true) {
+	    if(!fb->vsync_on) {
+		DEBUG_LOG("vsync thread sleeping id = %d fake = 0");
+		while(!fb->vsync_on)
+		    pthread_cond_wait(&fb->cond,&fb->mutex);
+		DEBUG_LOG("vsync thread woke up id = %d fake = 0");
+		if(!fb->vsync_on)
+		    continue;
+	    }
 	    if(pread(fb->vsyncfd,read_result,20,0)) {
 		timestamp = atol(read_result);
 		fb->hwc_procs->vsync(fb->hwc_procs, fb->id, timestamp);
@@ -192,12 +210,18 @@ error:
 }
 
 static void start_vsync_thread(fb_ctx_t *fb) {
+
+    pthread_mutex_lock(&fb->mutex);
+
     if(!fb->fake_vsync)
 	ioctl(fb->fd,HISIFB_VSYNC_CTRL, &fb->vsync_on);
 
-    if(!fb->vthread_running && fb->vsync_on) {
+    if(!fb->vthread_running) {
 	pthread_create(&fb->vthread,NULL,&vsync_thread, fb);
+    } else {
+       pthread_cond_signal(&fb->cond);
     }
+    pthread_mutex_unlock(&fb->mutex);
 }
 
 static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
@@ -234,27 +258,30 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
     int ret = -1;
     int fd = -1;
     struct hwc_context_t *context = (hwc_context_t *)dev;
+
     switch(disp) {
 	case 0:
-	    if(context->prim.available)
+	    if(context->prim.available) {
 		fd = context->prim.fd;
-	    else
+	    } else
 		return -EINVAL;
 	    break;
 	case 1:
-	    if(context->phys.available)
+	    if(context->phys.available) {
 		fd = context->phys.fd;
-	    else
+	    } else
 		return -EINVAL;
 	    break;
 	case 2:
-	    if(context->virt.available)
+	    if(context->virt.available) {
 		fd = context->virt.fd;
-	    else
+	    } else
 		return -EINVAL;
 	    break;
 
     }
+
+
     if(fd > 0) {
         ret = ioctl(fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
         if(ret)
@@ -339,6 +366,8 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 	dev->prim.vsync_on = 0;
 	dev->prim.fake_vsync = 0;
 	dev->prim.id = 0;
+        dev->prim.mutex = PTHREAD_MUTEX_INITIALIZER;
+        dev->prim.cond = PTHREAD_COND_INITIALIZER;
 	dev->prim.fd = open (FB0_FILE, O_WRONLY);
 	if(dev->prim.fd < 0) {
 	    ALOGE("Could not open fb0 file!");
@@ -353,6 +382,8 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 	/* init external physical display */
 	dev->phys.available = 1;
 	dev->phys.id = 1;
+        dev->phys.mutex = PTHREAD_MUTEX_INITIALIZER;
+        dev->phys.cond = PTHREAD_COND_INITIALIZER;
 	dev->phys.fd = open (FB1_FILE, O_WRONLY);
 	if(dev->phys.fd < 0) {
 	    ALOGW("Could not open fb1 file!");
@@ -364,6 +395,8 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 	/* init virtual displays */
 	dev->virt.available = 1;
 	dev->virt.id = 2;
+        dev->virt.mutex = PTHREAD_MUTEX_INITIALIZER;
+        dev->virt.cond = PTHREAD_COND_INITIALIZER;
 	dev->virt.fd = open (FB2_FILE, O_WRONLY);
 	if(dev->virt.fd < 0) {
 	    ALOGE("Could not open fb2 file!");
