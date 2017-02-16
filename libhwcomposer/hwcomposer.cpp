@@ -50,7 +50,9 @@
 
 #endif // FAKE_VSYNC
 
-#define FB_FILE "/dev/graphics/fb0"
+#define FB0_FILE "/dev/graphics/fb0"
+#define FB1_FILE "/dev/graphics/fb1"
+#define FB2_FILE "/dev/graphics/fb2"
 #define TIMESTAMP_FILE "/sys/devices/virtual/graphics/fb0/vsync_timestamp"
 
 //#define DEBUG
@@ -61,16 +63,24 @@
 #define DEBUG_LOG(x...) do {} while(0)
 #endif
 
-static pthread_t vthread;
-struct hwc_context_t {
-    hwc_composer_device_1_t device;
-    /* our private state goes below here */
-    hwc_procs_t const *hwc_procs;
+struct fb_ctx_t {
+    int id;
+    int available;
     int fd;
     int vsyncfd;
     int vsync_on;
     int vthread_running;
     int fake_vsync;
+    pthread_t vthread;
+    hwc_procs_t const *hwc_procs;
+};
+
+struct hwc_context_t {
+    hwc_composer_device_1_t device;
+    /* our private state goes below here */
+    fb_ctx_t prim;
+    fb_ctx_t phys;
+    fb_ctx_t virt;
 };
 
 static void write_string(const char * path, const char * value) {
@@ -151,24 +161,23 @@ static int hwc_set(hwc_composer_device_1_t *dev,
 static void * vsync_thread(void * arg) {
    setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY +
                 android::PRIORITY_MORE_FAVORABLE);
-   DEBUG_LOG("vsync thread enter");
-   struct hwc_context_t *context = (hwc_context_t *)arg;
-   context->vthread_running = 1;
+   fb_ctx_t *fb = (fb_ctx_t *) arg;
+   DEBUG_LOG("vsync thread enter id = %d fake = %d", fb->id, fb->fake_vsync);
+   fb->vthread_running = 1;
    int retval = -1;
    int64_t timestamp = 0;
    char read_result[20];
-
-   if(context->fake_vsync) {
-	while(context->vsync_on) {
+   if(fb->fake_vsync) {
+	while(fb->vsync_on) {
 	    timestamp = systemTime();
-	    context->hwc_procs->vsync(context->hwc_procs,0,timestamp);
+	    fb->hwc_procs->vsync(fb->hwc_procs,fb->id,timestamp);
 	    usleep(16666);
 	}
    } else {
-	while(context->vsync_on) {
-	    if(pread(context->vsyncfd,read_result,20,0)) {
+	while(fb->vsync_on) {
+	    if(pread(fb->vsyncfd,read_result,20,0)) {
 		timestamp = atol(read_result);
-		context->hwc_procs->vsync(context->hwc_procs, 0, timestamp);
+		fb->hwc_procs->vsync(fb->hwc_procs, fb->id, timestamp);
 		usleep(16666);
 	    } else { goto error; }
        }
@@ -176,25 +185,45 @@ static void * vsync_thread(void * arg) {
 
    retval = 0;
 error:
-   context->vthread_running = 0;
+   fb->vthread_running = 0;
    DEBUG_LOG("vsync thread exit");
    return &retval; 
 
 }
 
+static void start_vsync_thread(fb_ctx_t *fb) {
+    if(!fb->fake_vsync)
+	ioctl(fb->fd,HISIFB_VSYNC_CTRL, &fb->vsync_on);
+
+    if(!fb->vthread_running && fb->vsync_on) {
+	pthread_create(&fb->vthread,NULL,&vsync_thread, fb);
+    }
+}
+
 static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
             int event, int enabled) {
     if(event == HWC_EVENT_VSYNC) {
-	if(disp) {
-	   ALOGE("Meticulus: How do I %s on display %d?", enabled ? "enable vsync" : "disable vysnc", disp);
-	   return -EINVAL;
-	}
 	struct hwc_context_t *context = (hwc_context_t *)dev;
-	context->vsync_on = enabled;
-	if(!context->fake_vsync)
-		ioctl(((hwc_context_t *)dev)->fd,HISIFB_VSYNC_CTRL, &enabled);
-	if(!context->vthread_running) {
-	    pthread_create(&vthread,NULL,&vsync_thread,context);
+
+	switch (disp) {
+	    case 0:
+		if(!context->prim.available)
+		    return -EINVAL;
+		context->prim.vsync_on = enabled;
+		start_vsync_thread(&context->prim);
+		break;
+	    case 1:
+		if(!context->phys.available)
+		    return -EINVAL;
+		context->phys.vsync_on = enabled;
+		start_vsync_thread(&context->phys);
+		break;
+	    case 2:
+		if(!context->virt.available)
+		    return -EINVAL;
+		context->virt.vsync_on = enabled;
+		start_vsync_thread(&context->virt);
+		break;
 	}
     }
     return 0;
@@ -203,13 +232,37 @@ static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
 
 static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
     int ret = -1;
-    if(!disp) {
-        ret = ioctl(((hwc_context_t *)dev)->fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
+    int fd = -1;
+    struct hwc_context_t *context = (hwc_context_t *)dev;
+    switch(disp) {
+	case 0:
+	    if(context->prim.available)
+		fd = context->prim.fd;
+	    else
+		return -EINVAL;
+	    break;
+	case 1:
+	    if(context->phys.available)
+		fd = context->phys.fd;
+	    else
+		return -EINVAL;
+	    break;
+	case 2:
+	    if(context->virt.available)
+		fd = context->virt.fd;
+	    else
+		return -EINVAL;
+	    break;
+
+    }
+    if(fd > 0) {
+        ret = ioctl(fd, FBIOBLANK, blank ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
         if(ret)
-	    ALOGE("Could not %s framebuffer!", blank ? "blank" : "unblank?");
+	    ALOGE("Could not %s framebuffer! on disp %d", blank ? "blank" : "unblank?", disp);
 
     } else {
-	    ALOGE("Meticulus: How do I %s display %d?", blank ? "bank" : "unblank", disp);
+	ALOGE("Meticulus: somehow the fd on %d was invalid while %s ?", disp, blank ? "banking" : "unblanking");
+	return -EINVAL;
     }
 
 
@@ -219,8 +272,11 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
 
 static void register_procs(struct hwc_composer_device_1* dev,
             hwc_procs_t const* procs) {
+    struct hwc_context_t *context = (hwc_context_t *)dev;
 
-    ((hwc_context_t *)dev)->hwc_procs = procs;
+    context->prim.hwc_procs = procs;
+    context->phys.hwc_procs = procs;
+    context->virt.hwc_procs = procs;
     DEBUG_LOG("procs registered");
 }
 
@@ -278,19 +334,44 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
         dev->device.eventControl = hwc_event_control;
         dev->device.registerProcs = register_procs;
         dev->device.query = query;
-	dev->vthread_running = 0;
-	dev->vsync_on = 0;
-	dev->fake_vsync = 0;
-	dev->fd = status = open (FB_FILE, O_WRONLY);
-	if(dev->fd < 0) {
+	/* init primary display */
+	dev->prim.vthread_running = 0;
+	dev->prim.vsync_on = 0;
+	dev->prim.fake_vsync = 0;
+	dev->prim.id = 0;
+	dev->prim.fd = open (FB0_FILE, O_WRONLY);
+	if(dev->prim.fd < 0) {
 	    ALOGE("Could not open fb0 file!");
 	    status = -EINVAL;
    	}
-	dev->vsyncfd = open(TIMESTAMP_FILE, O_RDONLY);
-	if(dev->vsyncfd < 0) {
-	    ALOGW("Using fake vsync...");
-	    dev->fake_vsync = 1;
+	dev->prim.available = 1;
+	dev->prim.vsyncfd = open(TIMESTAMP_FILE, O_RDONLY);
+	if(dev->prim.vsyncfd < 0) {
+	    ALOGW("Using fake vsync on primary...");
+	    dev->prim.fake_vsync = 1;
+	}
+	/* init external physical display */
+	dev->phys.available = 1;
+	dev->phys.id = 1;
+	dev->phys.fd = open (FB1_FILE, O_WRONLY);
+	if(dev->phys.fd < 0) {
+	    ALOGW("Could not open fb1 file!");
+	    ALOGW("External physicals display will be unavailable.");
+	    dev->phys.available = 0;
+	}
+	dev->phys.fake_vsync = 1;
+	dev->phys.vsync_on = 0;
+	/* init virtual displays */
+	dev->virt.available = 1;
+	dev->virt.id = 2;
+	dev->virt.fd = open (FB2_FILE, O_WRONLY);
+	if(dev->virt.fd < 0) {
+	    ALOGE("Could not open fb2 file!");
+	    ALOGW("Virtual displays will be unavailable.");
+	    dev->virt.available = 0;
    	}
+	dev->virt.fake_vsync = 1;
+	dev->virt.vsync_on = 0;
         *device = &dev->device.common;
     }
     return status;
