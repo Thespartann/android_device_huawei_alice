@@ -69,6 +69,7 @@ struct fb_ctx_t {
     int fd;
     int vsyncfd;
     int vsync_on;
+    int vsync_stop;
     int vthread_running;
     int fake_vsync;
     pthread_t vthread;
@@ -173,9 +174,11 @@ static void * vsync_thread(void * arg) {
 	while(true) {
 	    if(!fb->vsync_on) {
 		DEBUG_LOG("vsync thread sleeping id = %d fake = 1");
-		while(!fb->vsync_on)
+		while(!fb->vsync_on && !fb->vsync_stop)
 		    pthread_cond_wait(&fb->cond,&fb->mutex);
 		DEBUG_LOG("vsync thread woke up id = %d fake = 1");
+		if(fb->vsync_stop)
+		    break;
 		if(!fb->vsync_on)
 		    continue;
 	    }
@@ -187,9 +190,11 @@ static void * vsync_thread(void * arg) {
 	while(true) {
 	    if(!fb->vsync_on) {
 		DEBUG_LOG("vsync thread sleeping id = %d fake = 0");
-		while(!fb->vsync_on)
+		while(!fb->vsync_on && !fb->vsync_stop)
 		    pthread_cond_wait(&fb->cond,&fb->mutex);
 		DEBUG_LOG("vsync thread woke up id = %d fake = 0");
+		if(fb->vsync_stop)
+		    break;
 		if(!fb->vsync_on)
 		    continue;
 	    }
@@ -209,9 +214,15 @@ error:
 
 }
 
-static void start_vsync_thread(fb_ctx_t *fb) {
+static void signal_vsync_thread(fb_ctx_t *fb) {
+    if(fb->vthread_running) {
+	pthread_mutex_lock(&fb->mutex);
+	pthread_cond_signal(&fb->cond);
+	pthread_mutex_unlock(&fb->mutex);
+    }
+}
 
-    pthread_mutex_lock(&fb->mutex);
+static void start_vsync_thread(fb_ctx_t *fb) {
 
     if(!fb->fake_vsync)
 	ioctl(fb->fd,HISIFB_VSYNC_CTRL, &fb->vsync_on);
@@ -219,9 +230,8 @@ static void start_vsync_thread(fb_ctx_t *fb) {
     if(!fb->vthread_running) {
 	pthread_create(&fb->vthread,NULL,&vsync_thread, fb);
     } else {
-       pthread_cond_signal(&fb->cond);
+	signal_vsync_thread(fb);
     }
-    pthread_mutex_unlock(&fb->mutex);
 }
 
 static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
@@ -263,18 +273,24 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
 	case 0:
 	    if(context->prim.available) {
 		fd = context->prim.fd;
+		context->prim.vsync_stop = blank;
+		signal_vsync_thread(&context->prim);
 	    } else
 		return -EINVAL;
 	    break;
 	case 1:
 	    if(context->phys.available) {
 		fd = context->phys.fd;
+		context->phys.vsync_stop = blank;
+		signal_vsync_thread(&context->phys);
 	    } else
 		return -EINVAL;
 	    break;
 	case 2:
 	    if(context->virt.available) {
 		fd = context->virt.fd;
+		context->virt.vsync_stop = blank;
+		signal_vsync_thread(&context->virt);
 	    } else
 		return -EINVAL;
 	    break;
@@ -364,6 +380,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 	/* init primary display */
 	dev->prim.vthread_running = 0;
 	dev->prim.vsync_on = 0;
+	dev->prim.vsync_stop = 0;
 	dev->prim.fake_vsync = 0;
 	dev->prim.id = 0;
         dev->prim.mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -392,6 +409,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 	}
 	dev->phys.fake_vsync = 1;
 	dev->phys.vsync_on = 0;
+	dev->phys.vsync_stop = 0;
 	/* init virtual displays */
 	dev->virt.available = 1;
 	dev->virt.id = 2;
@@ -404,6 +422,7 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
 	    dev->virt.available = 0;
    	}
 	dev->virt.fake_vsync = 1;
+	dev->virt.vsync_stop = 0;
 	dev->virt.vsync_on = 0;
         *device = &dev->device.common;
     }
