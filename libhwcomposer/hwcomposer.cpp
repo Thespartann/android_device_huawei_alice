@@ -81,9 +81,7 @@ struct fb_ctx_t {
 struct hwc_context_t {
     hwc_composer_device_1_t device;
     /* our private state goes below here */
-    fb_ctx_t prim;
-    fb_ctx_t phys;
-    fb_ctx_t virt;
+    fb_ctx_t disp[3];
 };
 
 static void write_string(const char * path, const char * value) {
@@ -239,26 +237,10 @@ static int hwc_event_control (struct hwc_composer_device_1* dev, int disp,
     if(event == HWC_EVENT_VSYNC) {
 	struct hwc_context_t *context = (hwc_context_t *)dev;
 
-	switch (disp) {
-	    case 0:
-		if(!context->prim.available)
-		    return -EINVAL;
-		context->prim.vsync_on = enabled;
-		start_vsync_thread(&context->prim);
-		break;
-	    case 1:
-		if(!context->phys.available)
-		    return -EINVAL;
-		context->phys.vsync_on = enabled;
-		start_vsync_thread(&context->phys);
-		break;
-	    case 2:
-		if(!context->virt.available)
-		    return -EINVAL;
-		context->virt.vsync_on = enabled;
-		start_vsync_thread(&context->virt);
-		break;
-	}
+	    if(!context->disp[disp].available)
+		return -EINVAL;
+	    context->disp[disp].vsync_on = enabled;
+	    start_vsync_thread(&context->disp[disp]);
     }
     return 0;
 
@@ -269,33 +251,12 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
     int fd = -1;
     struct hwc_context_t *context = (hwc_context_t *)dev;
 
-    switch(disp) {
-	case 0:
-	    if(context->prim.available) {
-		fd = context->prim.fd;
-		context->prim.vsync_stop = blank;
-		signal_vsync_thread(&context->prim);
-	    } else
-		return -EINVAL;
-	    break;
-	case 1:
-	    if(context->phys.available) {
-		fd = context->phys.fd;
-		context->phys.vsync_stop = blank;
-		signal_vsync_thread(&context->phys);
-	    } else
-		return -EINVAL;
-	    break;
-	case 2:
-	    if(context->virt.available) {
-		fd = context->virt.fd;
-		context->virt.vsync_stop = blank;
-		signal_vsync_thread(&context->virt);
-	    } else
-		return -EINVAL;
-	    break;
-
-    }
+    if(context->disp[disp].available) {
+	fd = context->disp[disp].fd;
+	context->disp[disp].vsync_stop = blank;
+	signal_vsync_thread(&context->disp[disp]);
+    } else
+	return -EINVAL;
 
 
     if(fd > 0) {
@@ -317,9 +278,9 @@ static void register_procs(struct hwc_composer_device_1* dev,
             hwc_procs_t const* procs) {
     struct hwc_context_t *context = (hwc_context_t *)dev;
 
-    context->prim.hwc_procs = procs;
-    context->phys.hwc_procs = procs;
-    context->virt.hwc_procs = procs;
+    context->disp[HWC_DISPLAY_PRIMARY].hwc_procs = procs;
+    context->disp[HWC_DISPLAY_EXTERNAL].hwc_procs = procs;
+    context->disp[HWC_DISPLAY_VIRTUAL].hwc_procs = procs;
     DEBUG_LOG("procs registered");
 }
 
@@ -378,52 +339,52 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
         dev->device.registerProcs = register_procs;
         dev->device.query = query;
 	/* init primary display */
-	dev->prim.vthread_running = 0;
-	dev->prim.vsync_on = 0;
-	dev->prim.vsync_stop = 0;
-	dev->prim.fake_vsync = 0;
-	dev->prim.id = 0;
-        dev->prim.mutex = PTHREAD_MUTEX_INITIALIZER;
-        dev->prim.cond = PTHREAD_COND_INITIALIZER;
-	dev->prim.fd = open (FB0_FILE, O_WRONLY);
-	if(dev->prim.fd < 0) {
+	dev->disp[HWC_DISPLAY_PRIMARY].vthread_running = 0;
+	dev->disp[HWC_DISPLAY_PRIMARY].vsync_on = 0;
+	dev->disp[HWC_DISPLAY_PRIMARY].vsync_stop = 0;
+	dev->disp[HWC_DISPLAY_PRIMARY].fake_vsync = 0;
+	dev->disp[HWC_DISPLAY_PRIMARY].id = HWC_DISPLAY_PRIMARY;
+        dev->disp[HWC_DISPLAY_PRIMARY].mutex = PTHREAD_MUTEX_INITIALIZER;
+        dev->disp[HWC_DISPLAY_PRIMARY].cond = PTHREAD_COND_INITIALIZER;
+	dev->disp[HWC_DISPLAY_PRIMARY].fd = open (FB0_FILE, O_WRONLY);
+	if(dev->disp[HWC_DISPLAY_PRIMARY].fd < 0) {
 	    ALOGE("Could not open fb0 file!");
 	    status = -EINVAL;
    	}
-	dev->prim.available = 1;
-	dev->prim.vsyncfd = open(TIMESTAMP_FILE, O_RDONLY);
-	if(dev->prim.vsyncfd < 0) {
+	dev->disp[HWC_DISPLAY_PRIMARY].available = 1;
+	dev->disp[HWC_DISPLAY_PRIMARY].vsyncfd = open(TIMESTAMP_FILE, O_RDONLY);
+	if(dev->disp[HWC_DISPLAY_PRIMARY].vsyncfd < 0) {
 	    ALOGW("Using fake vsync on primary...");
-	    dev->prim.fake_vsync = 1;
+	    dev->disp[HWC_DISPLAY_PRIMARY].fake_vsync = 1;
 	}
 	/* init external physical display */
-	dev->phys.available = 1;
-	dev->phys.id = 1;
-        dev->phys.mutex = PTHREAD_MUTEX_INITIALIZER;
-        dev->phys.cond = PTHREAD_COND_INITIALIZER;
-	dev->phys.fd = open (FB1_FILE, O_WRONLY);
-	if(dev->phys.fd < 0) {
+	dev->disp[HWC_DISPLAY_EXTERNAL].available = 1;
+	dev->disp[HWC_DISPLAY_EXTERNAL].id = HWC_DISPLAY_EXTERNAL;
+        dev->disp[HWC_DISPLAY_EXTERNAL].mutex = PTHREAD_MUTEX_INITIALIZER;
+        dev->disp[HWC_DISPLAY_EXTERNAL].cond = PTHREAD_COND_INITIALIZER;
+	dev->disp[HWC_DISPLAY_EXTERNAL].fd = open (FB1_FILE, O_WRONLY);
+	if(dev->disp[HWC_DISPLAY_EXTERNAL].fd < 0) {
 	    ALOGW("Could not open fb1 file!");
 	    ALOGW("External physicals display will be unavailable.");
-	    dev->phys.available = 0;
+	    dev->disp[HWC_DISPLAY_EXTERNAL].available = 0;
 	}
-	dev->phys.fake_vsync = 1;
-	dev->phys.vsync_on = 0;
-	dev->phys.vsync_stop = 0;
+	dev->disp[HWC_DISPLAY_EXTERNAL].fake_vsync = 1;
+	dev->disp[HWC_DISPLAY_EXTERNAL].vsync_on = 0;
+	dev->disp[HWC_DISPLAY_EXTERNAL].vsync_stop = 0;
 	/* init virtual displays */
-	dev->virt.available = 1;
-	dev->virt.id = 2;
-        dev->virt.mutex = PTHREAD_MUTEX_INITIALIZER;
-        dev->virt.cond = PTHREAD_COND_INITIALIZER;
-	dev->virt.fd = open (FB2_FILE, O_WRONLY);
-	if(dev->virt.fd < 0) {
+	dev->disp[HWC_DISPLAY_VIRTUAL].available = 1;
+	dev->disp[HWC_DISPLAY_VIRTUAL].id = HWC_DISPLAY_VIRTUAL;
+        dev->disp[HWC_DISPLAY_VIRTUAL].mutex = PTHREAD_MUTEX_INITIALIZER;
+        dev->disp[HWC_DISPLAY_VIRTUAL].cond = PTHREAD_COND_INITIALIZER;
+	dev->disp[HWC_DISPLAY_VIRTUAL].fd = open (FB2_FILE, O_WRONLY);
+	if(dev->disp[HWC_DISPLAY_VIRTUAL].fd < 0) {
 	    ALOGE("Could not open fb2 file!");
 	    ALOGW("Virtual displays will be unavailable.");
-	    dev->virt.available = 0;
+	    dev->disp[HWC_DISPLAY_VIRTUAL].available = 0;
    	}
-	dev->virt.fake_vsync = 1;
-	dev->virt.vsync_stop = 0;
-	dev->virt.vsync_on = 0;
+	dev->disp[HWC_DISPLAY_VIRTUAL].fake_vsync = 1;
+	dev->disp[HWC_DISPLAY_VIRTUAL].vsync_stop = 0;
+	dev->disp[HWC_DISPLAY_VIRTUAL].vsync_on = 0;
         *device = &dev->device.common;
     }
     return status;
