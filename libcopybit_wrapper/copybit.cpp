@@ -191,9 +191,7 @@ static int fill_color(struct copybit_device_t *dev,
 #ifdef DEBUG
     ALOGD("%s enter",__func__);
 #endif
-    if(!fill_color_once)
-	fill_color_once = real_fill_color(real_device,dst,rect,color);
-    return fill_color_once;
+    return 0;
 }
 
 /*****************************************************************************/
