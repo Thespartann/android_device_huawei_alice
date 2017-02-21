@@ -40,6 +40,7 @@
 static int low_power = 0;
 static int dt2w = 0;
 static struct power_profile * profile = &performance; 
+static struct power_profile * sel_profile = &performance;
 
 static void write_string(char * path, char * value) {
     int fd = open(path, O_WRONLY);
@@ -159,16 +160,19 @@ static void power_hint_set_profile(struct power_module *module, int p) {
     switch(p) {
 	case 0:
 	    profile = &power_save;
+	    sel_profile = &power_save;
 	    power_init(module);
 	    ALOGI("Set power save profile.");
 	    break;
 	case 1:
 	    profile = &balanced;
+	    sel_profile = &balanced;
 	    power_init(module);
 	    ALOGI("Set balanced profile.");
 	    break;
 	case 2:
 	    profile = &performance;
+	    sel_profile = &performance;
 	    power_init(module);
 	    ALOGI("Set performance profile.");
 	    break;
@@ -219,7 +223,7 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		 * Set thread prio on the app???
 		 * POWER_HINT_LAUNCH_BOOST seems like it's not implemented in N.
 		 */
-		DEBUG_LOG("POWER_HINT_LAUNCH_BOOST app=%s pid=%d", packageName,pid);
+		ALOGI("POWER_HINT_LAUNCH_BOOST app=%s pid=%d", packageName,pid);
 		/* intentional fall through */
 	case POWER_HINT_LAUNCH:
 		DEBUG_LOG("POWER_HINT_LAUNCH");
@@ -231,6 +235,16 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		    var = *(int *) data;
 		DEBUG_LOG("POWER_HINT_PROFILE %d", var);	
                 power_hint_set_profile(module,var);
+		break;
+	case POWER_HINT_SUSTAINED_PERFORMANCE:
+		if(data != NULL)
+		    var = *(int *) data;
+		DEBUG_LOG("POWER_HINT_SUSTAINED_PREFORMANCE %d", var);
+		if(var)
+		    profile = &performance;
+		else
+		    profile = sel_profile;
+		power_init(module);
 		break;
         default:
 		ALOGE("Unknown power hint %d", hint);
