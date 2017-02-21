@@ -226,10 +226,6 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		if(!low_power)
 		    power_hint_interactive(0);
 		break;
-	case POWER_HINT_AUDIO:
-		DEBUG_LOG("POWER_HINT_AUDIO %d", var);
-		ALOGI("Meticulus: POWER_HINT_AUDIO is used! Implement!");
-		break;
 	case POWER_HINT_SET_PROFILE:
 		if(data != NULL)
 		    var = *(int *) data;
