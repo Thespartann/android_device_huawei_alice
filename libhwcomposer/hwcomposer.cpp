@@ -199,7 +199,7 @@ static void * vsync_thread(void * arg) {
 	    if(pread(fb->vsyncfd,read_result,20,0)) {
 		timestamp = atol(read_result);
 		fb->hwc_procs->vsync(fb->hwc_procs, fb->id, timestamp);
-		usleep(16500);
+		usleep(16666);
 	    } else { goto error; }
        }
    }
