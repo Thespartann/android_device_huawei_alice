@@ -215,16 +215,6 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 		if(!low_power)
 		    power_hint_cpu_boost(var);
 		break;
-	case POWER_HINT_LAUNCH_BOOST:
-		packageName = ((launch_boost_info_t *)data)->packageName;
-		pid = ((launch_boost_info_t *)data)->pid;
-
-		/* Meticulus: not quite sure what to do with this info?
-		 * Set thread prio on the app???
-		 * POWER_HINT_LAUNCH_BOOST seems like it's not implemented in N.
-		 */
-		ALOGI("POWER_HINT_LAUNCH_BOOST app=%s pid=%d", packageName,pid);
-		/* intentional fall through */
 	case POWER_HINT_LAUNCH:
 		DEBUG_LOG("POWER_HINT_LAUNCH");
 		if(!low_power)
