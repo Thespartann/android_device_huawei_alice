@@ -20,10 +20,10 @@ LOCAL_PATH:= $(call my-dir)
 # hw/<POWERS_HARDWARE_MODULE_ID>.<ro.hardware>.so
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := lights.c
+LOCAL_SRC_FILES := lights.c stock_lights_interface.c
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
-LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_SHARED_LIBRARIES := liblog libcutils
 LOCAL_MODULE := lights.hi6250
 
 include $(BUILD_SHARED_LIBRARY)

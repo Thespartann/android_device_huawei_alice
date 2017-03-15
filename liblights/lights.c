@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "lights"
+#define LOG_TAG "Meticulus Lights HAL"
 
 #include <cutils/log.h>
 
@@ -29,11 +29,23 @@
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
-
+#include <cutils/properties.h>
 #include <hardware/lights.h>
 #include <hardware/hardware.h>
 
 #define DEBUG
+
+#define STOCK_PROP "persist.sys.stock_lights_HAL"
+#define LOWPOWER_PROP "persist.sys.lights_HAL_lp"
+#define CHARGING_PROP "persist.sys.lights_HAL_c"
+#define FULLPOWER_PROP "persist.sys.lights_HAL_fp"
+#define NOTIFICATION_PROP "persist.sys.lights_HAL_n"
+#define LOWPOWER ""
+#define CHARGING ""
+#define FULLPOWER ""
+#define NOTIFICATION ""
+
+extern int load_stock_lights(char *path, hw_module_t **pHmi);
 
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -53,6 +65,7 @@ char const *const BLUE_DELAYOFF_FILE = "/sys/class/leds/blue/delay_off";
 char const *const BACKLIGHT_FILE = "/sys/class/leds/lcd_backlight0/brightness";
 
 static int last_battery_color = 0xff000000;
+static int last_noti_color = 0xff000000;
 
 /** Write integer to file **/
 static int write_int(char const *path, int value)
@@ -101,10 +114,9 @@ static void stop_blink(void) {
     write_int(BLUE_DELAYOFF_FILE, 0);
 }
 
-static void set_light_color(int color) {
+static void int_to_argb(int color, int argb[]) {
     char scolor[255];
     char alpha[3], red[3], green[3], blue[3];
-    int ialpha,ired,igreen,iblue;
     sprintf(scolor, "%x",color);
 #ifdef DEBUG
     ALOGD("color=%s",scolor);
@@ -117,15 +129,23 @@ static void set_light_color(int color) {
 #ifdef DEBUG
     ALOGD("alpha=%s red=%s green=%s blue=%s",alpha,red,green,blue);
 #endif
-    ired = strtol(red,NULL,16);
-    igreen = strtol(green,NULL,16);
-    iblue = strtol(blue,NULL,16);
+    argb[0] = (int)strtol(alpha,NULL,16);
+    argb[1] = (int)strtol(red,NULL,16);
+    argb[2] = (int)strtol(green,NULL,16);
+    argb[3] = (int)strtol(blue,NULL,16);
 
+}
+
+static void set_light_color(int color) {
+
+    int argb[4];
     stop_blink();
 
-    write_int(RED_BRIGHTNESS_FILE,ired);
-    write_int(GREEN_BRIGHTNESS_FILE,igreen);
-    write_int(BLUE_BRIGHTNESS_FILE,iblue);
+    int_to_argb(color, argb);
+
+    write_int(RED_BRIGHTNESS_FILE,argb[1]);
+    write_int(GREEN_BRIGHTNESS_FILE,argb[2]);
+    write_int(BLUE_BRIGHTNESS_FILE,argb[3]);
 
 }
 
@@ -179,10 +199,11 @@ static int set_light_notifications(struct light_device_t* dev, struct light_stat
 {
     int err = 0; 
     pthread_mutex_lock(&g_lock);
+    last_noti_color = state->color;
     if(state->color == 0xff000000)
 	set_light_color(last_battery_color);
     else
-    	set_light_color(state->color);
+	set_light_color(property_get_int32(NOTIFICATION,state->color));
     set_blink(state);
     pthread_mutex_unlock(&g_lock);
     return err;
@@ -191,9 +212,25 @@ static int set_light_notifications(struct light_device_t* dev, struct light_stat
 static int set_light_battery(struct light_device_t* dev, struct light_state_t const* state)
 {
     int err = 0;
+    int argb[4];
+    int color = state->color;
     pthread_mutex_lock(&g_lock);
     last_battery_color = state->color;
-    set_light_color(state->color);
+    if(last_noti_color == 0xff000000) {
+        int_to_argb(color,argb);
+	/* Yellow charging between 25% and 90% */
+	if(argb[1] == 0xff && argb[2] == 0xff && argb[3] == 0x00)
+	    color = property_get_int64(CHARGING_PROP,color);
+	/* Red below 25 % */
+	else if(argb[1] = 0xff && argb[2] == 0 && argb[3] == 0x00)
+	    color = property_get_int64(LOWPOWER_PROP,color);
+	else
+	/* Green 90% or above */
+	    color = property_get_int64(FULLPOWER_PROP,color);
+
+	set_light_color(color);
+	set_blink(state);
+    }
     pthread_mutex_unlock(&g_lock);
     return err;
 }
@@ -209,6 +246,17 @@ static int close_lights(struct light_device_t *dev)
 /** Open a new instance of a lights device using name */
 static int open_lights(const struct hw_module_t *module, char const *name, struct hw_device_t **device)
 {
+
+	if(property_get_bool(STOCK_PROP, 0)) {
+	    ALOGI("%s is set. Loading Stock lights HAL",STOCK_PROP);
+	    if(!load_stock_lights("/system/lib64/hw/lights.default.so", &module)) {
+		return module->methods->open(module,name,device);
+	    } else {
+		ALOGE("%s is set but could not load Stock lights HAL!", STOCK_PROP);
+		property_set(STOCK_PROP, "false");
+	    }
+	}
+
 	pthread_t lighting_poll_thread;
 
 	int (*set_light) (struct light_device_t *dev,

@@ -82,3 +82,28 @@ telephony.lteOnGsmDevice=1
 
 # Tethering
 persist.sys.usb.config.extra=none
+
+#
+# Meticulus Lights HAL
+#
+# lp(low power) battery below 25%
+# c (charging) battery above 25% below 90%
+# fp (full power) batter above 90%
+# n (notification)
+#
+# COLORS ARGB
+# red = 0xffff0000
+# yellow = 0xffffff00
+# green = 0xff00ff00
+# blue = 0xff0000ff
+# purple = 0xffff00ff
+# teal = 0xff00ffff
+persist.sys.stock_lights_HAL=false
+persist.sys.lights_HAL_lp=0xffff0000
+persist.sys.lights_HAL_c=0xffffff00
+persist.sys.lights_HAL_fp=0xff00ff00
+persist.sys.lights_HAL_n=0xff0000ff
+#
+# Meticulus Power HAL
+#
+persist.sys.stock_power_HAL=false
