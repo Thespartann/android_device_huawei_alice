@@ -21,9 +21,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#define LOG_TAG "Met-Dev Hisi PowerHAL"
+#define LOG_TAG "Meticulus PowerHAL"
 #include <utils/Log.h>
-
+#include <cutils/properties.h>
 #include <hardware/hardware.h>
 #include <hardware/power.h>
 
@@ -37,6 +37,12 @@
 #define DEBUG_LOG(x...) do {} while(0)
 #endif
 
+#define STOCK_PROP "persist.sys.stock_power_HAL"
+
+static hw_module_t *stock_power_module;
+extern int load_stock_power(char *path, hw_module_t **pHmi);
+
+static int stock_power = 0;
 static int low_power = 0;
 static int dt2w = 0;
 static struct power_profile * profile = &performance; 
@@ -58,9 +64,21 @@ static void write_string(char * path, char * value) {
 
 static void power_init(struct power_module *module)
 {
+    stock_power = property_get_bool(STOCK_PROP,false) ? 1 : 0;
+    if(stock_power) {
+	ALOGI("%s is set. Loading Stock Power HAL...", STOCK_PROP);
+	if(load_stock_power("/system/lib64/hw/power.default.so", &stock_power_module)) {
+	    ALOGE("%sis set but can't load Stock Power HAL!", STOCK_PROP);
+	    property_set(STOCK_PROP, "false");
+	    stock_power = 0;
+	}
+    }
 
-    DEBUG_LOG("init");
- 
+    if(stock_power && stock_power_module && ((power_module_t *)stock_power_module)->init) {
+	ALOGI("->Stock Power HAL init");
+	return ((power_module_t *)stock_power_module)->init((power_module_t *)stock_power_module);
+    }
+    ALOGI("init");
     write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_max);
     write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
     write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
@@ -74,7 +92,12 @@ static void power_init(struct power_module *module)
 }
 
 static void power_set_interactive(struct power_module *module, int on) {
-	DEBUG_LOG("set_interactive %d", on);
+	if(stock_power && stock_power_module && ((power_module_t *)stock_power_module)->setInteractive) {
+	    ALOGI("->Stock Power HAL: setInteractive %d", on);
+	    return ((power_module_t *)stock_power_module)->setInteractive((power_module_t *)stock_power_module,on);
+	} 
+
+	ALOGI("setInteractive %d", on);
 	if(on && !low_power) {
 	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	    write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
@@ -185,6 +208,11 @@ static void power_hint_set_profile(struct power_module *module, int p) {
 static void power_hint(struct power_module *module, power_hint_t hint,
                        void *data) {
 
+    if(stock_power && stock_power_module && ((power_module_t *)stock_power_module)->powerHint) {
+	DEBUG_LOG("->Stock Power HAL: power hint 0x%x",hint);
+	return ((power_module_t *)stock_power_module)->powerHint((power_module_t *)stock_power_module,hint,data);
+    }
+
     int var = 0;
     char * packageName;
     int pid = 0;
@@ -252,6 +280,8 @@ static void set_dt2w(int on) {
 
 static int get_feature(struct power_module *module, feature_t feature) {
 
+    if(stock_power) return -1;
+
     int retval = 0;
     switch(feature) {
 	case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
@@ -268,7 +298,9 @@ static int get_feature(struct power_module *module, feature_t feature) {
 }
 
 static void set_feature(struct power_module *module, feature_t feature, int state) {
-    
+
+    if(stock_power) return;
+
     switch(feature) {
 	case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
 	    set_dt2w(state);
