@@ -180,14 +180,15 @@ static void set_blink(struct light_state_t const* state) {
     stop_blink();
     if(!state->flashMode) return;
 
-    if(ired > igreen && ired > iblue) {
+    if(ired) {
 	write_int(RED_DELAYON_FILE, state->flashOnMS);
 	write_int(RED_DELAYOFF_FILE, state->flashOffMS);
     }
-    else if(igreen > ired && igreen > iblue) {
+    if(igreen) {
 	write_int(GREEN_DELAYON_FILE, state->flashOnMS);
 	write_int(GREEN_DELAYOFF_FILE, state->flashOffMS);
-    } else {
+    }
+    if(iblue) {
 	write_int(BLUE_DELAYON_FILE, state->flashOnMS);
 	write_int(BLUE_DELAYOFF_FILE, state->flashOffMS);
     }
@@ -222,10 +223,10 @@ static int set_light_battery(struct light_device_t* dev, struct light_state_t co
 	if(argb[1] == 0xff && argb[2] == 0xff && argb[3] == 0x00)
 	    color = property_get_int64(CHARGING_PROP,color);
 	/* Red below 25 % */
-	else if(argb[1] = 0xff && argb[2] == 0 && argb[3] == 0x00)
+	else if(argb[1] == 0xff && argb[2] == 0x00 && argb[3] == 0x00)
 	    color = property_get_int64(LOWPOWER_PROP,color);
-	else
 	/* Green 90% or above */
+	else if(argb[1] == 0x00 && argb[2] == 0xff && argb[3] == 0x00)
 	    color = property_get_int64(FULLPOWER_PROP,color);
 
 	set_light_color(color);
