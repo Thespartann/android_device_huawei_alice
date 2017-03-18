@@ -201,6 +201,8 @@ static int set_light_notifications(struct light_device_t* dev, struct light_stat
     int err = 0; 
     pthread_mutex_lock(&g_lock);
     last_noti_color = state->color;
+    /* reset before changing */
+    set_light_color(0xff000000);
     if(state->color == 0xff000000)
 	set_light_color(last_battery_color);
     else
