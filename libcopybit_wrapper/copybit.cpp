@@ -88,7 +88,7 @@ tag: HARDWARE_MODULE_TAG,
      version_major: 1,
      version_minor: 0,
      id: COPYBIT_HARDWARE_MODULE_ID,
-     name: "Meticulus COPYBIT Wrapper",
+     name: "Meticulus Copybit Wrapper",
      author: "Meticulus Development",
      methods: &copybit_module_methods
         }

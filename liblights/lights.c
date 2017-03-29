@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "Meticulus Lights HAL"
+#define LOG_TAG "Meticulus Lights"
 
 #include <cutils/log.h>
 
@@ -303,7 +303,7 @@ struct hw_module_t HAL_MODULE_INFO_SYM =
 	.version_major = 1,
 	.version_minor = 0,
 	.id = LIGHTS_HARDWARE_MODULE_ID,
-	.name = "Lights for hi6250",
+	.name = "Meticulus Lights",
 	.author = "Meticulus Development",
 	.methods = &lights_methods,
 };

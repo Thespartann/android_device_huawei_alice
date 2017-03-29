@@ -21,7 +21,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#define LOG_TAG "Meticulus PowerHAL"
+#define LOG_TAG "Meticulus Power"
 #include <utils/Log.h>
 #include <cutils/properties.h>
 #include <hardware/hardware.h>
@@ -324,7 +324,7 @@ struct power_module HAL_MODULE_INFO_SYM = {
         .module_api_version = POWER_MODULE_API_VERSION_0_3,
         .hal_api_version = HARDWARE_HAL_API_VERSION,
         .id = POWER_HARDWARE_MODULE_ID,
-        .name = "Met-Dev Hisi Power HAL",
+        .name = "Meticulus Power",
         .author = "Meticulus Development",
         .methods = &power_module_methods,
     },

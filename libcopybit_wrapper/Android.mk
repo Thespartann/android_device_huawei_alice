@@ -27,7 +27,7 @@ include $(CLEAR_VARS)
 LOCAL_SHARED_LIBRARIES := liblog libcutils
 LOCAL_SRC_FILES := copybit.cpp copybit_interface.cpp dump.cpp
 LOCAL_MODULE := libcopybit_wrapper
-LOCAL_CFLAGS:= -DLOG_TAG=\"copybit_wrapper\"
+LOCAL_CFLAGS:= -DLOG_TAG='"Meticulus Copybit Wrapper"'
 
 ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
 LOCAL_CFLAGS += -DDEBUG

@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
-#define LOG_TAG "Met-Dev Hisi HWC"
+#define LOG_TAG "Meticulus HWComposer"
 #include <cutils/log.h>
 #include <cutils/atomic.h>
 
@@ -110,7 +110,7 @@ hwc_module_t HAL_MODULE_INFO_SYM = {
         .version_major = 1,
         .version_minor = 0,
         .id = HWC_HARDWARE_MODULE_ID,
-        .name = "Met-Dev Hisi HWComposer",
+        .name = "Meticulus HWComposer",
         .author = "Meticulus Development",
         .methods = &hwc_module_methods,
     }
@@ -267,7 +267,7 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
 	    ALOGE("Could not %s framebuffer! on disp %d", blank ? "blank" : "unblank?", disp);
 
     } else {
-	ALOGE("Meticulus: somehow the fd on %d was invalid while %s ?", disp, blank ? "banking" : "unblanking");
+	ALOGE("Somehow the fd on %d was invalid while %s ?", disp, blank ? "banking" : "unblanking");
 	return -EINVAL;
     }
 
