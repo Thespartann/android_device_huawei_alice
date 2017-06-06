@@ -254,9 +254,6 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
 
     if(context->disp[disp].available) {
 	fd = context->disp[disp].fd;
-	context->disp[disp].vsync_stop = blank;
-	context->disp[disp].vsync_on = blank ? 0 : 1;
-	signal_vsync_thread(&context->disp[disp]);
     } else
 	return -EINVAL;
 
@@ -271,6 +268,9 @@ static int hwc_blank(struct hwc_composer_device_1* dev, int disp, int blank) {
 	return -EINVAL;
     }
 
+    context->disp[disp].vsync_stop = blank;
+    context->disp[disp].vsync_on = blank ? 0 : 1;
+    signal_vsync_thread(&context->disp[disp]);
 
     DEBUG_LOG("blank called %d",blank);
     return ret;
