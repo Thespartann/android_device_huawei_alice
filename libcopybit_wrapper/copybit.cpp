@@ -72,26 +72,28 @@ struct copybit_context_t {
 
 //#define DEBUG
 
+char stock_cb_path[] = "/system/lib64/hw/copybit.real.so";
+
 static int open_copybit(const struct hw_module_t* module, const char* name,
                         struct hw_device_t** device);
 
 static struct hw_module_methods_t copybit_module_methods = {
-open:  open_copybit
+    .open = open_copybit
 };
 
 /*
  * The COPYBIT Module
  */
 struct copybit_module_t HAL_MODULE_INFO_SYM = {
-common: {
-tag: HARDWARE_MODULE_TAG,
-     version_major: 1,
-     version_minor: 0,
-     id: COPYBIT_HARDWARE_MODULE_ID,
-     name: "Meticulus Copybit Wrapper",
-     author: "Meticulus Development",
-     methods: &copybit_module_methods
-        }
+    .common = {
+	.tag = HARDWARE_MODULE_TAG,
+	.version_major = 1,
+     	.version_minor = 0,
+     	.id = COPYBIT_HARDWARE_MODULE_ID,
+     	.name = "Meticulus Copybit Wrapper",
+     	.author = "Meticulus Development",
+     	.methods = &copybit_module_methods
+    }
 };
 
 /** Set a parameter to value */
@@ -136,11 +138,16 @@ static int stretch_copybit(
     struct copybit_region_t const *region)
 {
 #ifdef DEBUG
+    char var[255];
     ALOGD("%s enter",__func__);
-    dump_image(dst,"dst");
-    dump_image(src,"src");
-    dump_rect(dst_rect,"dst_rect");
-    dump_rect(src_rect,"src_rect");
+    sprintf(var,"%s","dst");
+    dump_image(dst,var);
+    sprintf(var,"%s","src");
+    dump_image(src,var);
+    sprintf(var,"%s","dst_rect");
+    dump_rect(dst_rect,var);
+    sprintf(var,"%s","src_rect");
+    dump_rect(src_rect,var);
 #endif
     return real_stretch(real_device,dst,src,dst_rect,src_rect,region);
 }
@@ -153,9 +160,12 @@ static int blit_copybit(
     struct copybit_region_t const *region)
 {
 #ifdef DEBUG
+    char var[255];
     ALOGD("%s enter",__func__);
-    dump_image(dst,"dst");
-    dump_image(src,"src");
+    sprintf(var,"%s","dst");
+    dump_image(dst,var);
+    sprintf(var,"%s","src");
+    dump_image(src,var);
 #endif
     return real_blit(real_device, dst,src,region);
 }
@@ -189,7 +199,12 @@ static int fill_color(struct copybit_device_t *dev,
                       uint32_t color)
 {
 #ifdef DEBUG
+    char var[255];
     ALOGD("%s enter",__func__);
+    sprintf(var,"%s","dst");
+    dump_image(dst,var);
+    sprintf(var,"%s","rect");
+    dump_rect(rect,var); 
 #endif
     return 0;
 }
@@ -243,9 +258,11 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
     ctx->device.flush_get_fence = flush_get_fence;
     ctx->device.clear = clear_copybit;
     *device = &ctx->device.common;
-    if(status = load_real_copybit("/system/lib64/hw/copybit.real.so", &real_module))
+    status = load_real_copybit(stock_cb_path, &real_module);
+    if(status)
 	ALOGE("Could not load real copybit!");	
-    if(status = open_real_copybit(real_module,&real_device))
+    status = open_real_copybit(real_module,&real_device);
+    if(status)
 	ALOGE("Could not open real copygit!");
     return status;
 }
