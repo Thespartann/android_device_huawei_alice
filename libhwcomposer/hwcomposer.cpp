@@ -88,10 +88,10 @@ static void write_string(const char * path, const char * value) {
     int fd = open(path, O_WRONLY);
 	if(!fd) { ALOGE("Unable to open to %s", path); return;}
 
-	ssize_t bytes_written = write(fd, value, strlen(value));
+	unsigned long bytes_written = write(fd, value, strlen(value));
 
 	if (bytes_written < 1 || bytes_written < strlen(value)) {
-		ALOGE("Unable to write to %s : %d",path, bytes_written);
+		ALOGE("Unable to write to %s : %lu",path, bytes_written);
 	}
 
     close(fd);
@@ -208,7 +208,7 @@ static void * vsync_thread(void * arg) {
 error:
    fb->vthread_running = 0;
    DEBUG_LOG("vsync thread exit");
-   return &retval; 
+   return NULL; 
 
 }
 
