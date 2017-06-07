@@ -7,8 +7,6 @@
 #include <limits.h>
 #include <utils/Log.h>
 
-#define LOG_TAG "Meticulus Lights HAL"
-
 void *handle = NULL;
 
 int load_stock_lights(char *path, hw_module_t **pHmi) {

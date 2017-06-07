@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "Meticulus Lights"
-
 #include <cutils/log.h>
 
 #include <stdint.h>
@@ -32,8 +30,6 @@
 #include <cutils/properties.h>
 #include <hardware/lights.h>
 #include <hardware/hardware.h>
-
-#define DEBUG
 
 #define STOCK_PROP "persist.sys.stock_lights_HAL"
 #define LOWPOWER_PROP "persist.sys.lights_HAL_lp"
@@ -65,7 +61,9 @@ char const *const BLUE_DELAYOFF_FILE = "/sys/class/leds/blue/delay_off";
 char const *const BACKLIGHT_FILE = "/sys/class/leds/lcd_backlight0/brightness";
 
 static int last_battery_color = 0xff000000;
-static int last_noti_color = 0xff000000;
+static unsigned int last_noti_color = 0xff000000;
+
+char stock_l_path[255] = "/system/lib64/hw/lights.default.so";
 
 /** Write integer to file **/
 static int write_int(char const *path, int value)
@@ -250,10 +248,9 @@ static int close_lights(struct light_device_t *dev)
 /** Open a new instance of a lights device using name */
 static int open_lights(const struct hw_module_t *module, char const *name, struct hw_device_t **device)
 {
-
 	if (property_get_bool(STOCK_PROP, 0)) {
 		ALOGI("%s is set. Loading Stock lights HAL", STOCK_PROP);
-		if (!load_stock_lights("/system/lib64/hw/lights.default.so", &module)) {
+		if (!load_stock_lights(stock_l_path, &module)) {
 			return module->methods->open(module, name, device);
 		} else {
 			ALOGE("%s is set but could not load Stock lights HAL!", STOCK_PROP);

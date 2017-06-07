@@ -25,5 +25,6 @@ LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
 LOCAL_SHARED_LIBRARIES := liblog libcutils
 LOCAL_MODULE := lights.hi6250
+LOCAL_CFLAGS := -DLOG_TAG='"Meticulus Lights"'
 
 include $(BUILD_SHARED_LIBRARY)
