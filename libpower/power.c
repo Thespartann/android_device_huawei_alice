@@ -42,19 +42,21 @@
 static hw_module_t *stock_power_module;
 extern int load_stock_power(char *path, hw_module_t **pHmi);
 
+static char stock_p_path[255] = "/system/lib64/hw/power.default.so";
+
 static int stock_power = 0;
 static int low_power = 0;
 static struct power_profile * profile = &performance; 
 static struct power_profile * sel_profile = &performance;
 
-static void write_string(char * path, char * value) {
+static void write_string(const char * path, const char * value) {
     int fd = open(path, O_WRONLY);
 	if(!fd) { ALOGE("Unable to open to %s", path); return;}
 
-	ssize_t bytes_written = write(fd, value, strlen(value));
+	unsigned long bytes_written = write(fd, value, strlen(value));
 
 	if (bytes_written < 1 || bytes_written < strlen(value)) {
-		ALOGE("Unable to write to %s : %d",path, bytes_written);
+		ALOGE("Unable to write to %s : %lu",path, bytes_written);
 	}
 
     close(fd);
@@ -66,7 +68,7 @@ static void power_init(struct power_module *module)
     stock_power = property_get_bool(STOCK_PROP,false) ? 1 : 0;
     if(stock_power) {
 	ALOGI("%s is set. Loading Stock Power HAL...", STOCK_PROP);
-	if(load_stock_power("/system/lib64/hw/power.default.so", &stock_power_module)) {
+	if(load_stock_power(stock_p_path, &stock_power_module)) {
 	    ALOGE("%sis set but can't load Stock Power HAL!", STOCK_PROP);
 	    property_set(STOCK_PROP, "false");
 	    stock_power = 0;
@@ -78,7 +80,7 @@ static void power_init(struct power_module *module)
 	return ((power_module_t *)stock_power_module)->init((power_module_t *)stock_power_module);
     }
     ALOGI("init");
-    write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_max);
+    write_string(CPU0_FREQ_MAX_PATH,(*profile).cpu0_freq_max);
     write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
     write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
     usleep(500);
@@ -91,23 +93,23 @@ static void power_init(struct power_module *module)
 }
 
 static void power_set_interactive(struct power_module *module, int on) {
-	if(stock_power && stock_power_module && ((power_module_t *)stock_power_module)->setInteractive) {
-	    ALOGI("->Stock Power HAL: setInteractive %d", on);
+    if(stock_power && stock_power_module && ((power_module_t *)stock_power_module)->setInteractive) {
+        ALOGI("->Stock Power HAL: setInteractive %d", on);
 	    return ((power_module_t *)stock_power_module)->setInteractive((power_module_t *)stock_power_module,on);
-	} 
+    } 
 
-	ALOGI("setInteractive %d", on);
-	if(on && !low_power) {
-	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	    write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
-	    write_string(GPU_FREQ_POLL_PATH,"3000\n");
-	    write_string(DDR_FREQ_POLL_PATH,"3000\n");
-	} else {
-	    write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	    write_string(DDR_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	    write_string(GPU_FREQ_POLL_PATH,"12000\n");
-	    write_string(DDR_FREQ_POLL_PATH,"12000\n");
-	}
+    ALOGI("setInteractive %d", on);
+    if(on && !low_power) {
+	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
+	write_string(GPU_FREQ_POLL_PATH,"3000\n");
+        write_string(DDR_FREQ_POLL_PATH,"3000\n");
+    } else {
+	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+	write_string(DDR_FREQ_MIN_PATH,(* profile).gpu_freq_low);
+	write_string(GPU_FREQ_POLL_PATH,"12000\n");
+	write_string(DDR_FREQ_POLL_PATH,"12000\n");
+    }
 }
 
 static void power_hint_cpu_boost(int dur) {
@@ -125,10 +127,8 @@ static void power_hint_cpu_boost(int dur) {
 }
 
 static void power_hint_interactive(int on) {
-	if(!(* profile).gpu_should_boost)
-	    return;
+    if(on && (* profile).gpu_should_boost)
 	write_string(GPU_ANIM_BOOST_PATH,"1\n");
-
 }
 
 static void power_hint_vsync(int on) {
