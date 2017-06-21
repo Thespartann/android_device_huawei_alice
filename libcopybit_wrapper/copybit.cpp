@@ -199,12 +199,7 @@ static int fill_color(struct copybit_device_t *dev,
                       uint32_t color)
 {
 #ifdef DEBUG
-    char var[255];
     ALOGD("%s enter",__func__);
-    sprintf(var,"%s","dst");
-    dump_image(dst,var);
-    sprintf(var,"%s","rect");
-    dump_rect(rect,var); 
 #endif
     return 0;
 }
