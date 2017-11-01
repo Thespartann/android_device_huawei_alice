@@ -27,6 +27,10 @@
 #define GPU_FREQ_MAX_PATH 	"/sys/class/devfreq/gpufreq/max_freq"
 #define GPU_FREQ_POLL_PATH 	"/sys/class/devfreq/gpufreq/polling_interval"
 #define GPU_ANIM_BOOST_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/animation_boost"
+#define GPU_ANIM_BOOST_F_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/animation_boost_freq"
+#define GPU_HISPEED_F_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/hispeed_freq"
+#define GPU_VSYNCUP_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/vsync_upthreshold"
+#define GPU_NOVSYNCUP_PATH	"/sys/class/devfreq/gpufreq/mali_ondemand/no_vsync_upthreshold"
 
 #define CPU0_BOOST_PULSE_PATH 	"/sys/devices/system/cpu/cpu0/cpufreq/interactive/boostpulse"
 #define CPU0_BOOST_P_DUR_PATH 	"/sys/devices/system/cpu/cpu0/cpufreq/interactive/boostpulse_duration"
@@ -42,19 +46,19 @@
 
 /* Start profile power_save  */
 
-#define DDR_FREQ_MAX_0	 	"360000000\n"
-#define DDR_FREQ_BOOST_0 	"360000000\n"
+#define DDR_FREQ_MAX_0	 	"533000000\n"
+#define DDR_FREQ_BOOST_0 	"533000000\n"
 #define DDR_FREQ_LOW_0	 	"120000000\n"
 
-#define GPU_FREQ_MAX_0	 	"360000000\n"
-#define GPU_FREQ_BOOST_0 	"360000000\n"
+#define GPU_FREQ_MAX_0	 	"680000000\n"
+#define GPU_FREQ_BOOST_0 	"680000000\n"
 #define GPU_FREQ_LOW_0	 	"120000000\n"
 
-#define CPU0_BOOST_P_DUR_DEF_0	1
-#define CPU0_FREQ_MAX_0	 	"807000\n"
+#define CPU0_BOOST_P_DUR_DEF_0	2000
+#define CPU0_FREQ_MAX_0	 	"1306000\n"
 #define CPU0_FREQ_LOW_0	 	"480000\n"
 
-#define CPU4_FREQ_MAX_0	 	"1402000\n"
+#define CPU4_FREQ_MAX_0	 	"1805000\n"
 #define CPU4_FREQ_LOW_0	 	"1402000\n"
 
 /* end profile power_save */
@@ -66,7 +70,7 @@
 #define DDR_FREQ_LOW_1	 	"120000000\n"
 
 #define GPU_FREQ_MAX_1	 	"680000000\n"
-#define GPU_FREQ_BOOST_1 	"480000000\n"
+#define GPU_FREQ_BOOST_1 	"800000000\n"
 #define GPU_FREQ_LOW_1	 	"120000000\n"
 
 #define CPU0_BOOST_P_DUR_DEF_1	4000
@@ -81,11 +85,11 @@
 /* Start profile performance */
 
 #define DDR_FREQ_MAX_2	 	"933000000\n"
-#define DDR_FREQ_BOOST_2 	"800000000\n"
+#define DDR_FREQ_BOOST_2 	"9330000000\n"
 #define DDR_FREQ_LOW_2	 	"120000000\n"
 
 #define GPU_FREQ_MAX_2	 	"900000000\n"
-#define GPU_FREQ_BOOST_2 	"800000000\n"
+#define GPU_FREQ_BOOST_2 	"900000000\n"
 #define GPU_FREQ_LOW_2	 	"120000000\n"
 
 #define CPU0_BOOST_P_DUR_DEF_2	8000

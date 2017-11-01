@@ -83,13 +83,14 @@ static void power_init(struct power_module *module)
     write_string(CPU0_FREQ_MAX_PATH,(*profile).cpu0_freq_max);
     write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
     write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-    usleep(500);
     write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
     write_string(GPU_FREQ_POLL_PATH,"50\n");
     write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
-    usleep(500);
     write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
     write_string(DDR_FREQ_POLL_PATH,"50\n");
+    write_string(GPU_ANIM_BOOST_F_PATH,(*profile).gpu_freq_boost);
+    write_string(GPU_HISPEED_F_PATH,(*profile).gpu_freq_max);
+
 }
 
 static void power_set_interactive(struct power_module *module, int on) {
@@ -102,13 +103,13 @@ static void power_set_interactive(struct power_module *module, int on) {
     if(on && !low_power) {
 	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
-	write_string(GPU_FREQ_POLL_PATH,"3000\n");
-        write_string(DDR_FREQ_POLL_PATH,"3000\n");
+	write_string(GPU_FREQ_POLL_PATH,"300\n");
+        write_string(DDR_FREQ_POLL_PATH,"300\n");
     } else {
 	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	write_string(DDR_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	write_string(GPU_FREQ_POLL_PATH,"12000\n");
-	write_string(DDR_FREQ_POLL_PATH,"12000\n");
+	write_string(GPU_FREQ_POLL_PATH,"1200\n");
+	write_string(DDR_FREQ_POLL_PATH,"1200\n");
     }
 }
 
@@ -134,21 +135,21 @@ static void power_hint_interactive(int on) {
 static void power_hint_vsync(int on) {
 	if(on) {
 	    if((* profile).gpu_should_boost) {
-	    	write_string(GPU_FREQ_MIN_PATH, (* profile).gpu_freq_boost);
-	    	write_string(GPU_FREQ_POLL_PATH,"1000\n");
+	    	write_string(GPU_VSYNCUP_PATH, "50\n");
+	    	write_string(GPU_NOVSYNCUP_PATH,"50\n");
 	    }
 	    if((* profile).ddr_should_boost) {
-	    	write_string(DDR_FREQ_MIN_PATH, (* profile).ddr_freq_boost);
-	    	write_string(DDR_FREQ_POLL_PATH,"1000\n");
+	    	write_string(DDR_FREQ_MAX_PATH, (* profile).ddr_freq_boost);
+	    	write_string(DDR_FREQ_POLL_PATH,"100\n");
 	    }
 	} else {
 	    if((* profile).gpu_should_boost) {
-	        write_string(GPU_FREQ_MIN_PATH, (* profile).gpu_freq_low);
-	        write_string(GPU_FREQ_POLL_PATH,"3000\n");
+	    	write_string(GPU_VSYNCUP_PATH, "85\n");
+	    	write_string(GPU_NOVSYNCUP_PATH,"85\n");
 	    }
 	    if((* profile).ddr_should_boost) {
-	        write_string(DDR_FREQ_MIN_PATH, (* profile).ddr_freq_low);
-	        write_string(DDR_FREQ_POLL_PATH,"3000\n");
+	        write_string(DDR_FREQ_MAX_PATH, (* profile).ddr_freq_max);
+	        write_string(DDR_FREQ_POLL_PATH,"300\n");
             }
 	}
 }
@@ -162,8 +163,8 @@ static void power_hint_low_power(int on) {
 	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_low);
 	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
-	write_string(GPU_FREQ_POLL_PATH,"0\n");
-	write_string(DDR_FREQ_POLL_PATH,"0\n");
+	write_string(GPU_FREQ_POLL_PATH,"1200\n");
+	write_string(DDR_FREQ_POLL_PATH,"1200\n");
     } else {
 	write_string(CPU0_FREQ_MAX_PATH,(* profile).cpu0_freq_max);
 	write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
@@ -171,8 +172,8 @@ static void power_hint_low_power(int on) {
 	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
 	write_string(DDR_FREQ_MAX_PATH,(* profile).ddr_freq_max);
 	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
-	write_string(GPU_FREQ_POLL_PATH,"3000\n");
-	write_string(DDR_FREQ_POLL_PATH,"3000\n");
+	write_string(GPU_FREQ_POLL_PATH,"300\n");
+	write_string(DDR_FREQ_POLL_PATH,"300\n");
     }
 }
 
