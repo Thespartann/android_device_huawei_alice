@@ -82,6 +82,8 @@ static void power_init(struct power_module *module)
     ALOGI("init");
     write_string(CPU0_FREQ_MAX_PATH,(*profile).cpu0_freq_max);
     write_string(CPU0_FREQ_MIN_PATH,(* profile).cpu0_freq_low);
+    write_string(CPU4_FREQ_MAX_PATH,(*profile).cpu4_freq_max);
+    write_string(CPU4_FREQ_MIN_PATH,(* profile).cpu4_freq_low);
     write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
     write_string(GPU_FREQ_MAX_PATH,(* profile).gpu_freq_max);
     write_string(GPU_FREQ_POLL_PATH,"50\n");
@@ -101,15 +103,11 @@ static void power_set_interactive(struct power_module *module, int on) {
 
     ALOGI("setInteractive %d", on);
     if(on && !low_power) {
-	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	write_string(DDR_FREQ_MIN_PATH,(* profile).ddr_freq_low);
-	write_string(GPU_FREQ_POLL_PATH,"300\n");
-        write_string(DDR_FREQ_POLL_PATH,"300\n");
+	profile = &power_save;
+	power_init(module);
     } else {
-	write_string(GPU_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	write_string(DDR_FREQ_MIN_PATH,(* profile).gpu_freq_low);
-	write_string(GPU_FREQ_POLL_PATH,"1200\n");
-	write_string(DDR_FREQ_POLL_PATH,"1200\n");
+	profile = sel_profile;
+	power_init(module);
     }
 }
 
@@ -128,8 +126,12 @@ static void power_hint_cpu_boost(int dur) {
 }
 
 static void power_hint_interactive(int on) {
-    if(on && (* profile).gpu_should_boost)
+    if(on && (* profile).gpu_should_boost) {
 	write_string(GPU_ANIM_BOOST_PATH,"1\n");
+	power_hint_cpu_boost(on);
+    } else {
+	write_string(GPU_ANIM_BOOST_PATH,"0\n");
+    }
 }
 
 static void power_hint_vsync(int on) {

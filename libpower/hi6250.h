@@ -39,7 +39,6 @@
 #define CPU0_FREQ_MIN_PATH 	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq"
 #define CPU0_FREQ_MAX_PATH 	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 
-#define CPU4_BOOST_PULSE_PATH 	"/sys/devices/system/cpu/cpu4/cpufreq/interactive/boostpulse"
 #define CPU4_GOV_PATH	 	"/sys/devices/system/cpu/cpu4/cpufreq/scaling_governor"
 #define CPU4_FREQ_MIN_PATH	"/sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq"
 #define CPU4_FREQ_MAX_PATH	"/sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq"
@@ -54,7 +53,7 @@
 #define GPU_FREQ_BOOST_0 	"680000000\n"
 #define GPU_FREQ_LOW_0	 	"120000000\n"
 
-#define CPU0_BOOST_P_DUR_DEF_0	2000
+#define CPU0_BOOST_P_DUR_DEF_0	4000
 #define CPU0_FREQ_MAX_0	 	"1306000\n"
 #define CPU0_FREQ_LOW_0	 	"480000\n"
 
@@ -66,14 +65,14 @@
 /* Start profile balanced */
 
 #define DDR_FREQ_MAX_1	 	"533000000\n"
-#define DDR_FREQ_BOOST_1 	"533000000\n"
-#define DDR_FREQ_LOW_1	 	"120000000\n"
+#define DDR_FREQ_BOOST_1 	"800000000\n"
+#define DDR_FREQ_LOW_1	 	"360000000\n"
 
 #define GPU_FREQ_MAX_1	 	"680000000\n"
 #define GPU_FREQ_BOOST_1 	"800000000\n"
-#define GPU_FREQ_LOW_1	 	"120000000\n"
+#define GPU_FREQ_LOW_1	 	"360000000\n"
 
-#define CPU0_BOOST_P_DUR_DEF_1	4000
+#define CPU0_BOOST_P_DUR_DEF_1	8000
 #define CPU0_FREQ_MAX_1	 	"1709000\n"
 #define CPU0_FREQ_LOW_1	 	"480000\n"
 
@@ -86,13 +85,13 @@
 
 #define DDR_FREQ_MAX_2	 	"933000000\n"
 #define DDR_FREQ_BOOST_2 	"9330000000\n"
-#define DDR_FREQ_LOW_2	 	"120000000\n"
+#define DDR_FREQ_LOW_2	 	"360000000\n"
 
 #define GPU_FREQ_MAX_2	 	"900000000\n"
 #define GPU_FREQ_BOOST_2 	"900000000\n"
-#define GPU_FREQ_LOW_2	 	"120000000\n"
+#define GPU_FREQ_LOW_2	 	"360000000\n"
 
-#define CPU0_BOOST_P_DUR_DEF_2	8000
+#define CPU0_BOOST_P_DUR_DEF_2	12000
 #define CPU0_FREQ_MAX_2	 	"1709000\n"
 #define CPU0_FREQ_LOW_2	 	"480000\n"
 
