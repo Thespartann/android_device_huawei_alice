@@ -35,6 +35,13 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/prebuilts/audio_effects.conf:system/vendor/etc/audio_effects.conf \
     $(LOCAL_PATH)/prebuilts/audio_policy.conf:system/etc/audio_policy.conf
 
+# Hardware
+PRODUCT_PACKAGES += \
+    power.hi6210sft \
+    hwcomposer.hi6210sft \
+    libcopybit_wrapper \
+    lights.hi6210sft
+
 # Camera
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/prebuilts/camera_orientation.cfg:system/etc/camera_orientation.cfg \
