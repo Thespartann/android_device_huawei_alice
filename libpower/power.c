@@ -27,7 +27,7 @@
 #include <hardware/hardware.h>
 #include <hardware/power.h>
 
-#include "hi6250.h"
+#include "hi6210sft.h"
 
 //#define DEBUG
 

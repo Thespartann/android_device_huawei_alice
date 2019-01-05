@@ -34,6 +34,6 @@ LOCAL_CFLAGS += -DDEBUG
 endif
 
 # Install the symlinks.
-LOCAL_POST_INSTALL_CMD := mkdir -p $(TARGET_OUT)/lib64/hw; ln -sf ../libcopybit_wrapper.so $(TARGET_OUT)/lib64/hw/copybit.hi6250.so;
+LOCAL_POST_INSTALL_CMD := mkdir -p $(TARGET_OUT)/lib64/hw; ln -sf ../libcopybit_wrapper.so $(TARGET_OUT)/lib64/hw/copybit.hi6210sft.so;
 
 include $(BUILD_SHARED_LIBRARY)

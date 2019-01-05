@@ -24,7 +24,7 @@ LOCAL_SRC_FILES := lights.c stock_lights_interface.c
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
 LOCAL_SHARED_LIBRARIES := liblog libcutils
-LOCAL_MODULE := lights.hi6250
+LOCAL_MODULE := lights.hi6210sft
 LOCAL_CFLAGS := -DLOG_TAG='"Meticulus Lights"'
 
 include $(BUILD_SHARED_LIBRARY)

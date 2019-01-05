@@ -8,7 +8,7 @@ extern int open_real_copybit(hw_module_t *module, hw_device_t **real_device);
 extern int close_real_copybit(hw_device_t *real_device);
 
 int main(void) {
-load_real_copybit("/system/lib64/hw/copybit.hi6250.so", &real_module);
+load_real_copybit("/system/lib64/hw/copybit.hi6210sft.so", &real_module);
 if(!open_real_copybit(real_module,&real_device))
     ALOGI("Meticulus copybit open!");
 if(!close_real_copybit(real_device))
