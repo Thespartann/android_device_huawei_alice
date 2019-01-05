@@ -426,6 +426,18 @@ on boot
     chmod 0444 /sys/bus/i2c/devices/0-0028/nfc_chip_type
     chown system system /sys/bus/i2c/devices/0-0028/nfc_fw_version
     chmod 0444 /sys/bus/i2c/devices/0-0028/nfc_fw_version
+    chown nfc nfc /sys/nfc/nfcservice_lock
+    chmod 0664 /sys/nfc/nfcservice_lock
+    chown nfc nfc /sys/nfc/nfc_svdd_sw
+    chmod 0664 /sys/nfc/nfc_svdd_sw
+    chown nfc nfc /sys/nfc/nfc_close_type
+    chmod 0664 /sys/nfc/nfc_close_type
+    chown nfc nfc /sys/nfc/nfc_single_channel
+    chmod 0444 /sys/nfc/nfc_single_channel
+    chown system nfc /sys/nfc/nfc_age_test_flag_state
+    chmod 0640 /sys/nfc/nfc_age_test_flag_state
+    chown system system /dev/pn544
+    chmod 0666 /dev/pn544
 
     chown system system /sys/class/leds/lcd_backlight0/brightness
     chmod 644 /sys/class/leds/lcd_backlight0/brightness
